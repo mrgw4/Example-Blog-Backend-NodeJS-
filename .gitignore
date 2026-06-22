@@ -9,6 +9,7 @@ database-credentials.env
 
 # Build output
 dist/
+temp-storage/
 
 # Logs
 *.log

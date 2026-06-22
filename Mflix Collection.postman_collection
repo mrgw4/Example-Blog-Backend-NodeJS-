@@ -1,0 +1,61 @@
+{
+  "info": {
+    "_postman_id": "9ee71b6d-6698-434e-8405-53874fb85bd2",
+    "name": "Blog Collection",
+    "description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "55997364",
+    "_collection_link": "https://go.postman.co/collection/55997364-9ee71b6d-6698-434e-8405-53874fb85bd2?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Get data",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"The content is expected value\", function () {",
+              "    const expectedData = [{\"name\":\"foo\"},{\"name\":\"Yvette Roth\"},{\"name\":\"Yolanda Owen\"},{\"name\":\"Ygritte\"},{\"name\":\"Yara Greyjoy\"},{\"name\":\"Viserys Targaryen\"},{\"name\":\"Victoria Sanders\"},{\"name\":\"Victor Patel\"},{\"name\":\"Victor Fleming\"},{\"name\":\"Varys\"},{\"name\":\"Tywin Lannister\"},{\"name\":\"Tyrion Lannister\"},{\"name\":\"Tormund Giantsbane\"},{\"name\":\"Tommen Baratheon\"},{\"name\":\"Thoros of Myr\"},{\"name\":\"Thomas Morris\"},{\"name\":\"Thomas Green\"},{\"name\":\"Thomas Buckley\"},{\"name\":\"Theresa Holmes\"},{\"name\":\"Theon Greyjoy\"},{\"name\":\"The Waif\"},{\"name\":\"The High Sparrow\"},{\"name\":\"Teresa Thomas\"},{\"name\":\"Taylor Scott\"},{\"name\":\"Taylor Hill\"},{\"name\":\"Talisa Maegyr\"},{\"name\":\"Stannis Baratheon\"},{\"name\":\"Shireen Baratheon\"},{\"name\":\"Shawn Mccormick\"},{\"name\":\"Shae\"},{\"name\":\"Selyse Baratheon\"},{\"name\":\"Sarah Lewis\"},{\"name\":\"Sansa Stark\"},{\"name\":\"Sandor Clegane\"},{\"name\":\"Samwell Tarly\"},{\"name\":\"Ros\"},{\"name\":\"Roose Bolton\"},{\"name\":\"Ronald Cox\"},{\"name\":\"Rodrik Cassel\"},{\"name\":\"Robert Jordan\"},{\"name\":\"Robert Baratheon\"},{\"name\":\"Robb Stark\"},{\"name\":\"Rickon Stark\"},{\"name\":\"Richard Schmidt\"},{\"name\":\"Richard Davis\"},{\"name\":\"Rast\"},{\"name\":\"Ramsay Bolton\"},{\"name\":\"Qyburn\"},{\"name\":\"Pypar\"},{\"name\":\"Podrick Payne\"},{\"name\":\"Phillip Collins\"},{\"name\":\"Petyr Baelish\"},{\"name\":\"Paula Sullivan\"},{\"name\":\"Paul Bailey\"},{\"name\":\"Patrick Knight\"},{\"name\":\"Patricia Good\"},{\"name\":\"Othell Yarwyck\"},{\"name\":\"Osha\"},{\"name\":\"Olly\"},{\"name\":\"Olenna Tyrell\"},{\"name\":\"Nichole Miller\"},{\"name\":\"Nicholas Webster\"},{\"name\":\"Nicholas Johnson\"},{\"name\":\"Ned Stark\"},{\"name\":\"Myrcella Baratheon\"},{\"name\":\"Ms. Cathy Miller\"},{\"name\":\"Mrs. Ariana Nunez\"},{\"name\":\"Morgan Smith\"},{\"name\":\"Missandei\"},{\"name\":\"Michael Moore\"},{\"name\":\"Michael Day\"},{\"name\":\"Meryn Trant\"},{\"name\":\"Mercedes Tyler\"},{\"name\":\"Melissa Young\"},{\"name\":\"Melissa Jones\"},{\"name\":\"Melisandre\"},{\"name\":\"Megan Turner\"},{\"name\":\"Megan Richards\"},{\"name\":\"Meera Reed\"},{\"name\":\"Mary Mitchell\"},{\"name\":\"Margaery Tyrell\"},{\"name\":\"Magical Mr. Mistoffelees\"},{\"name\":\"Maester Luwin\"},{\"name\":\"Maester Aemon\"},{\"name\":\"Mace Tyrell\"},{\"name\":\"Lori Franklin\"},{\"name\":\"Lori Blankenship\"},{\"name\":\"Loras Tyrell\"},{\"name\":\"Lisa Silva\"},{\"name\":\"Lisa Russo\"},{\"name\":\"Lisa Rasmussen\"},{\"name\":\"Lancel Lannister\"},{\"name\":\"Kristen Schmidt\"},{\"name\":\"Kimberly Gates\"},{\"name\":\"Khal Drogo\"},{\"name\":\"Kevan Lannister\"},{\"name\":\"Kenneth Chandler\"},{\"name\":\"Kelsey Smith\"},{\"name\":\"Keith Phillips\"},{\"name\":\"Kathryn Sosa\"},{\"name\":\"Karina Martin\"},{\"name\":\"Justin Williams\"},{\"name\":\"Julia Nichols\"},{\"name\":\"Joshua Kent\"},{\"name\":\"Jose Hall\"},{\"name\":\"Jordan Medina\"},{\"name\":\"Jorah Mormont\"},{\"name\":\"Jonathon Mccullough\"},{\"name\":\"Jon Snow\"},{\"name\":\"Jojen Reed\"},{\"name\":\"John Roman\"},{\"name\":\"John Rice\"},{\"name\":\"John Bishop\"},{\"name\":\"Joffrey Baratheon\"},{\"name\":\"Jerry Cabrera\"},{\"name\":\"Jeor Mormont\"},{\"name\":\"Jennifer Frazier\"},{\"name\":\"Jeffrey Roberts\"},{\"name\":\"Javier Smith\"},{\"name\":\"Jason Smith\"},{\"name\":\"Jason Hernandez\"},{\"name\":\"Jaqen H'ghar\"},{\"name\":\"Janos Slynt\"},{\"name\":\"Jamie Santana\"},{\"name\":\"Jaime Lannister\"},{\"name\":\"Irri\"},{\"name\":\"Hot Pie\"},{\"name\":\"Hodor\"},{\"name\":\"Heather Leonard\"},{\"name\":\"Grey Worm\"},{\"name\":\"Grenn\"},{\"name\":\"Gregor Clegane\"},{\"name\":\"Greg Powell\"},{\"name\":\"Grand Maester Pycelle\"},{\"name\":\"Gilly\"},{\"name\":\"Gendry\"},{\"name\":\"Garrett Obrien\"},{\"name\":\"Eric Navarro\"},{\"name\":\"Emily Ellis\"},{\"name\":\"Ellaria Sand\"},{\"name\":\"Elizabeth Wiggins\"},{\"name\":\"Edward Barrett\"},{\"name\":\"Eddison Tollett\"},{\"name\":\"Doreah\"},{\"name\":\"Donna Smith\"},{\"name\":\"Donna Russell\"},{\"name\":\"Desiree Pierce\"},{\"name\":\"Denise Davidson\"},{\"name\":\"Denise Bryant\"},{\"name\":\"Deborah Kennedy\"},{\"name\":\"Davos Seaworth\"},{\"name\":\"Daniel Simmons\"},{\"name\":\"Daenerys Targaryen\"},{\"name\":\"Daario Naharis\"},{\"name\":\"Connie Johnson\"},{\"name\":\"Connie Barton\"},{\"name\":\"Christopher Robinson\"},{\"name\":\"Christian Williams\"},{\"name\":\"Cersei Lannister\"},{\"name\":\"Catherine Romero\"},{\"name\":\"Catelyn Stark\"},{\"name\":\"Cameron Duran\"},{\"name\":\"Bronn\"},{\"name\":\"Brienne of Tarth\"},{\"name\":\"Brenda Martin\"},{\"name\":\"Brandon Hardy\"},{\"name\":\"Bran Stark\"},{\"name\":\"Bradley Brooks\"},{\"name\":\"Bowen Marsh\"},{\"name\":\"Blake Sellers\"},{\"name\":\"Blake Fitzgerald\"},{\"name\":\"Beric Dondarrion\"},{\"name\":\"Barristan Selmy\"},{\"name\":\"Barbara Gonzalez\"},{\"name\":\"Ashlee Hart\"},{\"name\":\"Arya Stark\"},{\"name\":\"April Cole\"},{\"name\":\"Anthony Thompson\"},{\"name\":\"Anthony Smith\"},{\"name\":\"Anthony Hurst\"},{\"name\":\"Anthony Cline\"},{\"name\":\"Andrea Le\"},{\"name\":\"Amy Ramirez\"},{\"name\":\"Amy Phillips\"},{\"name\":\"Alliser Thorne\"}];",
+              "    pm.expect(pm.response.json()).to.deep.equal(expectedData);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "packages": {},
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/users/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            ""
+          ]
+        },
+        "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+      },
+      "response": []
+    }
+  ]
+}
