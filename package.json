@@ -26,5 +26,9 @@
     "@types/jest": "^30.0.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "unrs-resolver@1.12.2": true
   }
 }
