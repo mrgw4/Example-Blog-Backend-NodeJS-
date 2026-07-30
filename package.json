@@ -4,6 +4,13 @@
   "description": "Express + MongoDB blog backend",
   "main": "dist/index.js",
   "scripts": {
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -23,9 +30,12 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
+    "@types/supertest": "^2.0.12",
     "nodemon": "^3.1.14",
-    "ts-node": "^10.9.2"
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.4.11"
   },
   "allowScripts": {
     "bcrypt@6.0.0": true,

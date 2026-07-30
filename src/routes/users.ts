@@ -10,7 +10,11 @@ const CreateUserSchema = z.object({
   email: z.email(),
   password: z.string().min(6).max(100)});
 
-// GET all users
+/**
+ * GET /api/users
+ * Returns all users, excluding sensitive fields.
+ * Handles database connectivity errors and returns the correct status code.
+ */
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const users = await user.getAllUsers();
@@ -28,7 +32,13 @@ router.get('/', async (_req: Request, res: Response) => {
     }
 });
 
-// POST create a new user
+
+/**
+ * POST /api/users
+ * Creates a new user after validating required input fields.
+ * Responds with 400 when required fields are missing,
+ * 503 for database connectivity or service errors, and 201 on success.
+ */
 router.post('/', async (req: Request, res: Response) => {
     try {
         const name = req.body.name;

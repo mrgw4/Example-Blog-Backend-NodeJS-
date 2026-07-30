@@ -10,11 +10,25 @@ const COLLECTIONS_TO_COPY = ['movies', 'comments', 'users'];
  * Turns "/blog_test" into "blog_test"
  * and "blog_test" into "blog_test"
  */
-function normaliseDbName(dbSelection: string): string {
+/**
+ * Normalises a database selection string by removing any leading slashes.
+ *
+ * @param dbSelection The raw database selection string from environment config.
+ * @returns The normalized database name.
+ */
+export function normaliseDbName(dbSelection: string): string {
   return dbSelection.replace(/^\/+/, '').trim();
 }
 
-async function copyCollection(
+/**
+ * Copies documents from a source database collection into a target database collection.
+ *
+ * @param sourceDb The source database instance.
+ * @param targetDb The target database instance.
+ * @param collectionName The collection name to copy.
+ * @returns The number of documents copied.
+ */
+export async function copyCollection(
   sourceDb: mongoose.mongo.Db,
   targetDb: mongoose.mongo.Db,
   collectionName: string
@@ -33,7 +47,13 @@ async function copyCollection(
   return docs.length;
 }
 
-async function resetTestDatabase(): Promise<Record<string, number>> {
+/**
+ * Resets the configured test database by copying documents from the source dataset.
+ *
+ * @returns An object mapping collection names to the number of documents copied.
+ * @throws {Error} When configuration is invalid, connection is unavailable, or the source/target databases cannot be accessed.
+ */
+export async function resetTestDatabase(): Promise<Record<string, number>> {
   const dbSelection = process.env.DATABASE_SELECTION || '/blog_test';
   const targetDbName = normaliseDbName(dbSelection);
 
@@ -80,9 +100,20 @@ async function resetTestDatabase(): Promise<Record<string, number>> {
   return results;
 }
 
-router.post('/reset', async (_req: Request, res: Response) => {
+/**
+ * Express route handler for POST /reset.
+ *
+ * @param _req The incoming request object (unused).
+ * @param res The Express response object.
+ * @returns The response after attempting a database reset.
+ */
+export async function handleResetRouteInternal(
+  _req: Request,
+  res: Response,
+  resetFn: () => Promise<Record<string, number>> = resetTestDatabase
+): Promise<Response> {
   try {
-    const copiedCollections = await resetTestDatabase();
+    const copiedCollections = await resetFn();
 
     return res.status(200).json({
       message: 'Test database reset successfully',
@@ -99,6 +130,15 @@ router.post('/reset', async (_req: Request, res: Response) => {
 
     return res.status(500).json({ error: 'Failed to reset test database' });
   }
-});
+}
+
+export async function handleResetRoute(
+  req: Request,
+  res: Response
+): Promise<Response> {
+  return handleResetRouteInternal(req, res);
+}
+
+router.post('/reset', handleResetRoute);
 
 export default router;
