@@ -8,7 +8,7 @@ const SALT_ROUNDS = 12;
  * @returns Promise resolving to the list of users.
  */
 export async function getAllUsers() {
-   return User.find().select('-password -email').sort({ name: -1 });
+   return User.find().select('-password -email -_id').sort({ name: -1 });
 }
 
 /**

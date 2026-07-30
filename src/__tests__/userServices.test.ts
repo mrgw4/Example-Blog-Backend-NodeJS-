@@ -43,7 +43,7 @@ describe('userServices', () => {
     const result = await getAllUsers();
 
     expect(mockedUser.find).toHaveBeenCalled();
-    expect(query.select).toHaveBeenCalledWith('-password -email');
+    expect(query.select).toHaveBeenCalledWith('-password -email -_id');
     expect(query.sort).toHaveBeenCalledWith({ name: -1 });
     expect(result).toEqual([{ name: 'Jane Doe' }]);
   });

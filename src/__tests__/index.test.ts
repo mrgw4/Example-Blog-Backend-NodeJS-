@@ -1,3 +1,10 @@
+jest.mock('dotenv', () => ({
+  __esModule: true,
+  default: {
+    config: jest.fn(),
+  },
+}));
+
 jest.mock('mongoose', () => {
   const actualMongoose = jest.requireActual('mongoose');
   return {
@@ -20,6 +27,9 @@ describe('index module', () => {
     jest.clearAllMocks();
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
+    delete process.env.PORT;
+    delete process.env.MONGODB_URI;
+    delete process.env.DATABASE_SELECTION;
   });
 
   it('exports the Express app', () => {
@@ -64,6 +74,40 @@ describe('index module', () => {
     expect(connectMock).toHaveBeenCalled();
   });
 
+  it('connectDB uses the default database values when env vars are unset', async () => {
+    delete process.env.MONGODB_URI;
+    delete process.env.DATABASE_SELECTION;
+    jest.resetModules();
+
+    await jest.isolateModulesAsync(async () => {
+      const freshIndexModule = await import('../index');
+      const freshMongoose = await import('mongoose');
+      const connectMock = (freshMongoose.default?.connect ?? freshMongoose.connect) as jest.Mock;
+      connectMock.mockResolvedValue({} as any);
+
+      await freshIndexModule.connectDB();
+
+      expect(connectMock).toHaveBeenCalledWith('mongodb://localhost:27017/blog/blog_test');
+    });
+  });
+
+  it('connectDB uses module-level database values from the environment when provided', async () => {
+    process.env.MONGODB_URI = 'mongodb://example:27017/';
+    process.env.DATABASE_SELECTION = '/custom_db';
+    jest.resetModules();
+
+    await jest.isolateModulesAsync(async () => {
+      const freshIndexModule = await import('../index');
+      const freshMongoose = await import('mongoose');
+      const connectMock = (freshMongoose.default?.connect ?? freshMongoose.connect) as jest.Mock;
+      connectMock.mockResolvedValue({} as any);
+
+      await freshIndexModule.connectDB();
+
+      expect(connectMock).toHaveBeenCalledWith('mongodb://example:27017//custom_db');
+    });
+  });
+
   it('startServer calls listen after connecting and executes callback', async () => {
     const connectMock = (mongoose.connect as jest.Mock).mockResolvedValue(undefined);
     const listenSpy = jest.spyOn(indexModule.app, 'listen').mockImplementation((...args: any[]) => {
@@ -80,12 +124,70 @@ describe('index module', () => {
     expect(listenSpy).toHaveBeenCalled();
   });
 
+  it('startServer uses the default port when env is unset', async () => {
+    delete process.env.PORT;
+    jest.resetModules();
+
+    await jest.isolateModulesAsync(async () => {
+      const freshIndexModule = await import('../index');
+      const freshMongoose = await import('mongoose');
+      const connectMock = (freshMongoose.default?.connect ?? freshMongoose.connect) as jest.Mock;
+      connectMock.mockResolvedValue(undefined);
+      const listenSpy = jest.spyOn(freshIndexModule.app, 'listen').mockImplementation((...args: any[]) => {
+        const callback = args[args.length - 1];
+        if (typeof callback === 'function') {
+          callback();
+        }
+        return { close: jest.fn() } as any;
+      });
+
+      await freshIndexModule.startServer();
+
+      expect(connectMock).toHaveBeenCalled();
+      expect(listenSpy).toHaveBeenCalledWith(5000, expect.any(Function));
+    });
+  });
+
+  it('startServer uses the module-level port from the environment when provided', async () => {
+    process.env.PORT = '4001';
+    jest.resetModules();
+
+    await jest.isolateModulesAsync(async () => {
+      const freshIndexModule = await import('../index');
+      const freshMongoose = await import('mongoose');
+      const connectMock = (freshMongoose.default?.connect ?? freshMongoose.connect) as jest.Mock;
+      connectMock.mockResolvedValue(undefined);
+      const listenSpy = jest.spyOn(freshIndexModule.app, 'listen').mockImplementation((...args: any[]) => {
+        const callback = args[args.length - 1];
+        if (typeof callback === 'function') {
+          callback();
+        }
+        return { close: jest.fn() } as any;
+      });
+
+      await freshIndexModule.startServer();
+
+      expect(connectMock).toHaveBeenCalled();
+      expect(listenSpy).toHaveBeenCalledWith('4001', expect.any(Function));
+    });
+  });
+
   it('executeRunServerIfMain calls runServer when the module is main', () => {
     const runServerSpy = jest.spyOn(indexModule, 'runServerInternal').mockResolvedValue(undefined);
 
     indexModule.executeRunServerIfMain('test-file', 'test-file');
 
     expect(runServerSpy).toHaveBeenCalled();
+
+    runServerSpy.mockRestore();
+  });
+
+  it('executeRunServerIfMain does nothing when the module is not main', () => {
+    const runServerSpy = jest.spyOn(indexModule, 'runServerInternal').mockResolvedValue(undefined);
+
+    indexModule.executeRunServerIfMain('main-file', 'other-file');
+
+    expect(runServerSpy).not.toHaveBeenCalled();
 
     runServerSpy.mockRestore();
   });
