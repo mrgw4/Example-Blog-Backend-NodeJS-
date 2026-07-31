@@ -35,7 +35,7 @@ describe('userServices', () => {
   it('returns users without password or email fields', async () => {
     const query = {
       select: jest.fn().mockReturnThis(),
-      sort: jest.fn().mockResolvedValue([{ name: 'Jane Doe' }]),
+      sort: jest.fn().mockResolvedValue([{ _id: 'user-1', name: 'Jane Doe' }]),
     };
 
     mockedUser.find.mockReturnValue(query);
@@ -43,9 +43,9 @@ describe('userServices', () => {
     const result = await getAllUsers();
 
     expect(mockedUser.find).toHaveBeenCalled();
-    expect(query.select).toHaveBeenCalledWith('-password -email -_id');
+    expect(query.select).toHaveBeenCalledWith('-password -email');
     expect(query.sort).toHaveBeenCalledWith({ name: -1 });
-    expect(result).toEqual([{ name: 'Jane Doe' }]);
+    expect(result).toEqual([{ _id: 'user-1', name: 'Jane Doe' }]);
   });
 
   it('throws when createUser is called with an existing email', async () => {

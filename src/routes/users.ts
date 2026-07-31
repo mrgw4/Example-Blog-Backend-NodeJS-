@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import * as user from '../services/userServices';
 import { z } from 'zod';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 // Validation schemas
 const CreateUserSchema = z.object({
@@ -13,7 +15,7 @@ const CreateUserSchema = z.object({
 /**
  * GET /api/users
  * Returns all users, excluding sensitive fields.
- * Handles database connectivity errors and returns the correct status code.
+
  */
 router.get('/', async (_req: Request, res: Response) => {
   try {
@@ -29,6 +31,124 @@ router.get('/', async (_req: Request, res: Response) => {
         else {
             res.status(500).json({ error: 'Failed to fetch users' });
         }
+    }
+});
+
+/**
+ * POST /api/users/login
+ * Authenticates a user and returns a JWT when credentials are valid.
+ */
+router.post('/login', async (req: Request, res: Response) => {
+    try {
+        const email = req.body.email;
+        const password = req.body.password;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const authenticatedUser = await user.loginUser(email, password);
+        const userId = authenticatedUser._id?.toString?.() ?? authenticatedUser.id;
+        const token = jwt.sign({ id: userId, email: authenticatedUser.email }, JWT_SECRET, {
+            expiresIn: '1h',
+        });
+        await user.createSession(userId, token);
+
+        return res.status(200).json({
+            token,
+            user: {
+                id: userId,
+                name: authenticatedUser.name,
+                email: authenticatedUser.email,
+            },
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('connect')) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        }
+
+        return res.status(401).json({ error: 'Invalid credentials' });
+    }
+});
+
+/**
+ * POST /api/users/logout
+ * Removes the provided session token from the database.
+ */
+router.post('/logout', async (req: Request, res: Response): Promise<Response | void> => {
+    try {
+        const authHeader = req.headers.authorization;
+        const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+        if (!bearerToken) {
+            return res.status(400).json({ error: 'Authorization token is required' });
+        }
+
+        await user.deleteSessionToken(bearerToken);
+
+        return res.status(200).json({ message: 'Logged out successfully' });
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('connect')) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        }
+
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+});
+
+/**
+ * GET /api/users/:id
+ * Returns a user by their ID, excluding sensitive fields.
+ */
+router.get('/:id', async (req: Request, res: Response): Promise<Response | void> => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+    if (!id ||typeof id !== 'string') {
+        res.status(400).json({ error: 'Invalid user id' });
+        return;
+    }
+
+    try {
+        const authHeader = req.headers.authorization;
+        const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        let isVerified = false;
+
+        if (bearerToken) {
+            try {
+                const verified = await user.verifySessionToken(bearerToken);
+                isVerified = Boolean(verified?.userId);
+            } catch (error) {
+                if (error instanceof Error && error.message === 'Token expired') {
+                    return res.status(401).json({ error: 'Token expired' });
+                }
+
+                isVerified = false;
+            }
+        }
+
+        const userRecord = await user.getUser(id);
+
+        if (!userRecord) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const userObject = userRecord.toObject ? userRecord.toObject() : userRecord;
+        const safeUser = { ...(userObject as unknown as Record<string, unknown>) };
+        delete safeUser.password;
+
+        if (!isVerified) {
+            delete safeUser.email;
+        }
+
+        return res.status(200).json(safeUser);
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('connect')) {
+            res.status(503).json({ error: 'Database unavailable' });
+        } else if (error instanceof Error && error.message.includes('not found')) {
+            res.status(404).json({ error: 'User not found' });
+        } else {
+            res.status(500).json({ error: 'Failed to fetch user' });
+       }
     }
 });
 

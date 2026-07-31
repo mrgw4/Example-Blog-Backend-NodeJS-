@@ -1,5 +1,6 @@
 import request from 'supertest';
 import express, { Express } from 'express';
+import jwt from 'jsonwebtoken';
 import userRouter from '../routes/users';
 import * as userServices from '../services/userServices';
 
@@ -14,6 +15,8 @@ app.use('/api/users', userRouter);
 describe('users route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedServices.createSession.mockResolvedValue({} as any);
+    mockedServices.verifySessionToken.mockResolvedValue({ userId: 'user-1' } as any);
   });
 
   it('returns 400 when required fields are missing', async () => {
@@ -48,6 +51,38 @@ describe('users route', () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: 'Failed to fetch users' });
+  });
+
+  it('returns a token and user payload when login succeeds', async () => {
+    mockedServices.loginUser.mockResolvedValue({ _id: 'user-1', name: 'Jane Doe', email: 'test@example.com' } as any);
+
+    const response = await request(app).post('/api/users/login').send({
+      email: 'test@example.com',
+      password: 'password',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('token');
+    expect(response.body.user).toEqual({ id: 'user-1', name: 'Jane Doe', email: 'test@example.com' });
+  });
+
+  it('hides email for a single-user response without a verified token', async () => {
+    mockedServices.getUser.mockResolvedValue({ _id: 'user-1', name: 'Jane Doe', email: 'test@example.com' } as any);
+
+    const response = await request(app).get('/api/users/user-1');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ _id: 'user-1', name: 'Jane Doe' });
+  });
+
+  it('returns email for a single-user response with a valid token', async () => {
+    mockedServices.getUser.mockResolvedValue({ _id: 'user-1', name: 'Jane Doe', email: 'test@example.com' } as any);
+    const token = jwt.sign({ id: 'user-1' }, 'dev-secret', { expiresIn: '1h' });
+
+    const response = await request(app).get('/api/users/user-1').set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.email).toBe('test@example.com');
   });
 
   it('returns 201 when createUser succeeds', async () => {
