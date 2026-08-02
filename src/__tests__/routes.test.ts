@@ -66,6 +66,107 @@ describe('users route', () => {
     expect(response.body.user).toEqual({ id: 'user-1', name: 'Jane Doe', email: 'test@example.com' });
   });
 
+  it('returns 400 when login credentials are missing', async () => {
+    const response = await request(app).post('/api/users/login').send({ email: 'test@example.com' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Email and password are required' });
+  });
+
+  it('returns 401 when loginUser rejects with invalid credentials', async () => {
+    mockedServices.loginUser.mockRejectedValue(new Error('Invalid credentials'));
+
+    const response = await request(app).post('/api/users/login').send({
+      email: 'test@example.com',
+      password: 'password',
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid credentials' });
+  });
+
+  it('returns 503 when loginUser throws a connect error', async () => {
+    mockedServices.loginUser.mockRejectedValue(new Error('connect failed'));
+
+    const response = await request(app).post('/api/users/login').send({
+      email: 'test@example.com',
+      password: 'password',
+    });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ error: 'Database unavailable' });
+  });
+
+  it('returns 200 and logs out a valid token', async () => {
+    mockedServices.deleteSessionToken.mockResolvedValue({} as any);
+
+    const response = await request(app).post('/api/users/logout').set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ message: 'Logged out successfully' });
+  });
+
+  it('returns 401 when logout receives an invalid token', async () => {
+    mockedServices.deleteSessionToken.mockRejectedValue(new Error('Invalid token'));
+
+    const response = await request(app).post('/api/users/logout').set('Authorization', 'Bearer invalid-token');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid token' });
+  });
+
+  it('returns 400 when logout has no token', async () => {
+    const response = await request(app).post('/api/users/logout');
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Authorization token is required' });
+  });
+
+  it('returns 401 when a single-user request uses an expired token', async () => {
+    mockedServices.verifySessionToken.mockRejectedValue(new Error('Token expired'));
+
+    const response = await request(app).get('/api/users/user-1').set('Authorization', 'Bearer expired-token');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Token expired' });
+  });
+
+  it('returns 404 when the requested user does not exist', async () => {
+    mockedServices.getUser.mockResolvedValue(null);
+
+    const response = await request(app).get('/api/users/user-1');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'User not found' });
+  });
+
+  it('returns 503 when getUser throws a connect error', async () => {
+    mockedServices.getUser.mockRejectedValue(new Error('connect failed'));
+
+    const response = await request(app).get('/api/users/user-1');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ error: 'Database unavailable' });
+  });
+
+  it('returns 404 when getUser throws a not-found error', async () => {
+    mockedServices.getUser.mockRejectedValue(new Error('not found'));
+
+    const response = await request(app).get('/api/users/user-1');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'User not found' });
+  });
+
+  it('returns 500 when getUser throws an unexpected error', async () => {
+    mockedServices.getUser.mockRejectedValue(new Error('unexpected failure'));
+
+    const response = await request(app).get('/api/users/user-1');
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: 'Failed to fetch user' });
+  });
+
   it('hides email for a single-user response without a verified token', async () => {
     mockedServices.getUser.mockResolvedValue({ _id: 'user-1', name: 'Jane Doe', email: 'test@example.com' } as any);
 
@@ -83,6 +184,16 @@ describe('users route', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.email).toBe('test@example.com');
+  });
+
+  it('hides email when verification fails for a token payload that is not accepted', async () => {
+    mockedServices.getUser.mockResolvedValue({ _id: 'user-1', name: 'Jane Doe', email: 'test@example.com' } as any);
+    mockedServices.verifySessionToken.mockRejectedValue(new Error('Invalid token'));
+
+    const response = await request(app).get('/api/users/user-1').set('Authorization', 'Bearer malformed-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ _id: 'user-1', name: 'Jane Doe' });
   });
 
   it('returns 201 when createUser succeeds', async () => {
@@ -120,6 +231,19 @@ describe('users route', () => {
 
     expect(response.status).toBe(503);
     expect(response.body).toEqual({ error: 'Email already in use' });
+  });
+
+  it('returns 503 when createUser throws a connect error', async () => {
+    mockedServices.createUser.mockRejectedValue(new Error('connect failed'));
+
+    const response = await request(app).post('/api/users').send({
+      name: 'Jane Doe',
+      email: 'test@example.com',
+      password: 'password',
+    });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ error: 'Database unavailable' });
   });
 
   it('returns 500 when createUser throws a non-Error', async () => {
