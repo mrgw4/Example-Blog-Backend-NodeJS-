@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import * as user from '../services/userServices';
 import { z } from 'zod';
 
@@ -77,14 +78,23 @@ router.post('/login', async (req: Request, res: Response) => {
  */
 router.post('/logout', async (req: Request, res: Response): Promise<Response | void> => {
     try {
-        const authHeader = req.headers.authorization;
-        const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        const rawAuth = req.headers.authorization;
 
-        if (!bearerToken) {
+        if (rawAuth === undefined) {
+            // No Authorization header at all
             return res.status(400).json({ error: 'Authorization token is required' });
         }
 
-        await user.deleteSessionToken(bearerToken);
+        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
+        // Accept either "Bearer <token>" (case-insensitive) or a raw token.
+        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+
+        if (!token) {
+            // Authorization header present but token missing/malformed
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        await user.deleteSessionToken(token);
 
         return res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
@@ -103,19 +113,26 @@ router.post('/logout', async (req: Request, res: Response): Promise<Response | v
 router.get('/:id', async (req: Request, res: Response): Promise<Response | void> => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-    if (!id ||typeof id !== 'string') {
+    if (!id || typeof id !== 'string') {
         res.status(400).json({ error: 'Invalid user id' });
         return;
     }
 
+    // Validate MongoDB ObjectId format to avoid Mongoose cast errors
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({ error: 'Invalid user id format' });
+        return;
+    }
+
     try {
-        const authHeader = req.headers.authorization;
-        const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        const rawAuth = req.headers.authorization ?? '';
+        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
+        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
         let isVerified = false;
 
-        if (bearerToken) {
+        if (token) {
             try {
-                const verified = await user.verifySessionToken(bearerToken);
+                const verified = await user.verifySessionToken(token);
                 isVerified = Boolean(verified?.userId);
             } catch (error) {
                 if (error instanceof Error && error.message === 'Token expired') {

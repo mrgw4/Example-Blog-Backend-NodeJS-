@@ -67,10 +67,22 @@ export async function loginUser(email: string, password: string) {
     return user;
 }
 
+/**
+ * Creates a new session for the authenticated user and returns the session document.
+ * @param userId The authenticated user's ID.
+ * @param token The JWT token for the session.
+ * @returns Promise resolving to the created session document.
+ */
 export async function createSession(userId: string, token: string) {
     return Session.create({ user_id: userId, jwt: token });
 }
 
+/**
+ * Verifies a session token and returns the session information if valid.
+ * @param token The JWT token for the session.
+ * @returns Promise resolving to the session information.
+ * @throws {Error} when the token is invalid or expired.
+ */
 export async function verifySessionToken(token: string) {
     const session = await Session.findOne({ jwt: token });
 
@@ -96,6 +108,11 @@ export async function verifySessionToken(token: string) {
     return { userId: decoded.id, email: decoded.email, session };
 }
 
+/**
+ * Deletes a session token from the database, logging the user out.
+ * @param token The JWT token for the session.
+ * @returns Promise resolving to the deleted session document.
+ */
 export async function deleteSessionToken(token: string) {
     const deletedSession = await Session.findOneAndDelete({ jwt: token });
 

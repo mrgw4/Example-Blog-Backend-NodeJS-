@@ -1,0 +1,675 @@
+{
+  "info": {
+    "_postman_id": "96f5a814-b54a-449c-9910-01295281c66a",
+    "name": "Blog Collection",
+    "description": "API collection for the example blog backend. Includes create/login/get/logout and negative tests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "55997364",
+    "_collection_link": "https://go.postman.co/collection/55997364-96f5a814-b54a-449c-9910-01295281c66a?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Create user",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// generate a unique email for this run",
+              "pm.environment.set('uniqueEmail', 'testuser_' + Date.now() + '@example.com');",
+              "pm.environment.unset('authToken');",
+              "pm.environment.unset('userId');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 201\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "pm.test(\"Response contains success message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('message');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Test User\",\"email\":\"{{uniqueEmail}}\",\"password\":\"password123\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/users",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create user - missing fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Error message present\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"X\",\"email\":\"bad\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/users",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create user - duplicate email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 503\", function () {",
+              "  pm.response.to.have.status(503);",
+              "});",
+              "pm.test(\"Email already in use message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "  pm.expect(json.error.toLowerCase()).to.include('email');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Test User\",\"email\":\"{{uniqueEmail}}\",\"password\":\"password123\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/users",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Token and user present\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('token');",
+              "  pm.expect(json).to.have.property('user');",
+              "  pm.environment.set('authToken', json.token);",
+              "  pm.environment.set('userId', json.user.id || json.user._id || '');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{uniqueEmail}}\",\"password\":\"password123\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/users/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login - missing fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Error message present\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{uniqueEmail}}\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/users/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login - bad credentials",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {",
+              "  pm.response.to.have.status(401);",
+              "});",
+              "pm.test(\"Invalid credentials message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{uniqueEmail}}\",\"password\":\"wrongpass\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/users/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get all users",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response is an array\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(Array.isArray(json)).to.be.true;",
+              "  pm.expect(json.length).to.be.at.least(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/users",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get user - unauthenticated",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 or 404\", function () {",
+              "  pm.expect([200,404]).to.include(pm.response.code);",
+              "});",
+              "pm.test(\"When found, email should be hidden without auth\", function () {",
+              "  if (pm.response.code === 200) {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.not.have.property('email');",
+              "  }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/users/{{userId}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "{{userId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get user - invalid id format",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Invalid id message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/users/5555555",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "5555555"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get user - not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {",
+              "  pm.response.to.have.status(404);",
+              "});",
+              "pm.test(\"Not found message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/users/507f1f77bcf86cd799439011",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "507f1f77bcf86cd799439011"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get user - authenticated",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Email visible when authenticated\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('email');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/users/{{userId}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "{{userId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logout - missing token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Error message present\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/users/logout",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logout - invalid token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {",
+              "  pm.response.to.have.status(401);",
+              "});",
+              "pm.test(\"Invalid token message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": ""
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/users/logout",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Logout message\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('message');",
+              "});",
+              "pm.environment.unset('authToken');",
+              "pm.environment.unset('userId');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/users/logout",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "users",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reset test database",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Reset message present\", function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.have.property('message');",
+              "  pm.expect(json.message.toLowerCase()).to.include('reset');",
+              "  pm.expect(json).to.have.property('copiedCollections');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/testreset/reset",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "testreset",
+            "reset"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
