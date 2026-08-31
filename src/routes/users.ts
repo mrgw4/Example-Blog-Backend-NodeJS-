@@ -205,4 +205,196 @@ router.post('/', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * Delete /api/user/:id
+ * Deletes a user by their ID.
+ * Responds with 400 for invalid IDs, 503 for database connectivity or service errors, and 200 on success.
+ */
+router.delete('/:id', async (req: Request, res: Response) => {
+
+    try {
+        const rawAuth = req.headers.authorization;
+
+        if (rawAuth === undefined) {
+            return res.status(400).json({ error: 'Authorization token is required' });
+        }
+
+        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
+        // Accept either "Bearer <token>" (case-insensitive) or a raw token.
+        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+
+        if (!token) {
+            // Authorization header present but token missing/malformed
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+        if (!id || typeof id !== 'string') {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        // Validate MongoDB ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Invalid user id format' });
+        }
+
+        const userId = await user.verifySessionToken(token);
+
+        if (!userId || userId.userId !== id) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        await user.deleteUser(id,token);
+
+        return res.status(200).json({ message: 'User deleted successfully' });
+
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('connect')) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        }  else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        }else {
+            return res.status(500).json({ error: 'Failed to delete user' });
+        }
+    }
+});
+
+/**
+ * PUT /api/users/:id
+ * Updates a user's profile information (name and/or email).
+ * Requires authentication and user can only update their own profile.
+ */
+router.put('/:id', async (req: Request, res: Response): Promise<Response | void> => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+        if (!id || typeof id !== 'string') {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        // Validate MongoDB ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Invalid user id format' });
+        }
+
+        const rawAuth = req.headers.authorization;
+
+        if (rawAuth === undefined) {
+            return res.status(400).json({ error: 'Authorization token is required' });
+        }
+
+        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
+        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+
+        if (!token) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        const verified = await user.verifySessionToken(token);
+
+        if (!verified || verified.userId !== id) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { name, email } = req.body;
+
+        if (!name && !email) {
+            return res.status(400).json({ error: 'At least one field (name or email) is required to update' });
+        }
+
+        const updateData: { name?: string; email?: string } = {};
+        if (name) updateData.name = name;
+        if (email) updateData.email = email;
+
+        const updatedUser = await user.updateUser(id, updateData);
+
+        return res.status(200).json({
+            message: 'User updated successfully',
+            user: {
+                id: updatedUser._id?.toString?.() ?? updatedUser.id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+            },
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('connect')) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        } else if (error instanceof Error && error.message === 'Email already in use') {
+            return res.status(400).json({ error: 'Email already in use' });
+        } else if (error instanceof Error && error.message === 'User not found') {
+            return res.status(404).json({ error: 'User not found' });
+        } else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        } else {
+            return res.status(500).json({ error: 'Failed to update user' });
+        }
+    }
+});
+
+/**
+ * POST /api/users/:id/change-password
+ * Changes a user's password after verifying the old password.
+ * Requires authentication and user can only change their own password.
+ */
+router.post('/:id/change-password', async (req: Request, res: Response): Promise<Response | void> => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+        if (!id || typeof id !== 'string') {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        // Validate MongoDB ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Invalid user id format' });
+        }
+
+        const rawAuth = req.headers.authorization;
+
+        if (rawAuth === undefined) {
+            return res.status(400).json({ error: 'Authorization token is required' });
+        }
+
+        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
+        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+
+        if (!token) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        const verified = await user.verifySessionToken(token);
+
+        if (!verified || verified.userId !== id) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { oldPassword, newPassword } = req.body;
+
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ error: 'Old password and new password are required' });
+        }
+
+        if (oldPassword === newPassword) {
+            return res.status(400).json({ error: 'New password must be different from old password' });
+        }
+
+        await user.changePassword(id, oldPassword, newPassword);
+
+        return res.status(200).json({ message: 'Password changed successfully' });
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('connect')) {
+            return res.status(503).json({ error: 'Database unavailable' });
+        } else if (error instanceof Error && error.message === 'Invalid password') {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        } else if (error instanceof Error && error.message === 'User not found') {
+            return res.status(404).json({ error: 'User not found' });
+        } else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
+            return res.status(401).json({ error: 'Invalid or expired token' });
+        } else {
+            return res.status(500).json({ error: 'Failed to change password' });
+        }
+    }
+});
+
 export default router;

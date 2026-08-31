@@ -122,3 +122,81 @@ export async function deleteSessionToken(token: string) {
 
     return deletedSession;
 }
+
+/**
+ * Deletes a user and logs the user out.
+ * @param userId The ID of the user to delete.
+ * @param token The JWT token for the session for the deleted user.
+ * @returns Promise resolving to the deleted user document.
+ */
+export async function deleteUser(userId: string, token: string) {
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+        throw new Error('User not found');
+    }
+
+    await deleteSessionToken(token);
+
+    return deletedUser;
+}
+
+/**
+ * Updates a user's profile information (name and/or email).
+ * @param userId The ID of the user to update.
+ * @param updateData Object containing optional name and/or email to update.
+ * @returns Promise resolving to the updated user document.
+ * @throws {Error} when the new email is already in use or user not found.
+ */
+export async function updateUser(userId: string, updateData: { name?: string; email?: string }) {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    // If email is being updated, check if it's already in use by another user
+    if (updateData.email && updateData.email !== user.email) {
+        const existingUser = await User.findOne({ email: updateData.email });
+        if (existingUser) {
+            throw new Error('Email already in use');
+        }
+    }
+
+    // Update the fields
+    if (updateData.name) {
+        user.name = updateData.name;
+    }
+    if (updateData.email) {
+        user.email = updateData.email;
+    }
+
+    return user.save();
+}
+
+/**
+ * Changes a user's password after verifying the old password.
+ * @param userId The ID of the user.
+ * @param oldPassword The user's current password.
+ * @param newPassword The new password to set.
+ * @returns Promise resolving to the updated user document.
+ * @throws {Error} when old password is incorrect or user not found.
+ */
+export async function changePassword(userId: string, oldPassword: string, newPassword: string) {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const passwordMatches = await bcrypt.compare(oldPassword, user.password);
+
+    if (!passwordMatches) {
+        throw new Error('Invalid password');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    user.password = hashedPassword;
+
+    return user.save();
+}
