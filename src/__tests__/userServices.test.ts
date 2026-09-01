@@ -1,4 +1,4 @@
-import { createUser, getAllUsers, loginUser, createSession, verifySessionToken, deleteSessionToken } from '../services/userServices';
+import { createUser, getAllUsers, loginUser, createSession, verifySessionToken, deleteSessionToken, getUser, updateUser, changePassword, deleteUser } from '../services/userServices';
 import User from '../models/User';
 import Session from '../models/Session';
 import bcrypt from 'bcrypt';
@@ -9,6 +9,8 @@ jest.mock('../models/User', () => ({
   default: {
     find: jest.fn(),
     findOne: jest.fn(),
+    findById: jest.fn(),
+    findByIdAndDelete: jest.fn(),
     create: jest.fn(),
   },
 }));
@@ -31,6 +33,8 @@ jest.mock('bcrypt', () => ({
 const mockedUser = User as unknown as {
   find: jest.Mock;
   findOne: jest.Mock;
+  findById: jest.Mock;
+  findByIdAndDelete: jest.Mock;
   create: jest.Mock;
 };
 
@@ -197,5 +201,139 @@ describe('userServices', () => {
 
     expect(mockedSession.findOneAndDelete).toHaveBeenCalledWith({ jwt: 'token' });
     expect(result).toEqual({ jwt: 'token' });
+  });
+
+  it('throws an error when deleteSessionToken cannot find the session', async () => {
+    mockedSession.findOneAndDelete.mockResolvedValue(null);
+
+    await expect(deleteSessionToken('non-existent-token')).rejects.toThrow('Invalid token');
+  });
+
+  // getUser tests
+  it('returns a user by ID', async () => {
+    const user = { _id: 'user-1', name: 'Jane Doe', email: 'test@example.com' };
+    mockedUser.findById.mockResolvedValue(user);
+
+    const result = await getUser('user-1');
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('user-1');
+    expect(result).toEqual(user);
+  });
+
+  it('returns null when user is not found by ID', async () => {
+    mockedUser.findById.mockResolvedValue(null);
+
+    const result = await getUser('nonexistent-id');
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('nonexistent-id');
+    expect(result).toBeNull();
+  });
+
+  // updateUser tests
+  it('updates user name successfully', async () => {
+    const user = { _id: 'user-1', name: 'Old Name', email: 'test@example.com', save: jest.fn().mockResolvedValue({ _id: 'user-1', name: 'New Name', email: 'test@example.com' }) };
+    mockedUser.findById.mockResolvedValue(user);
+
+    const result = await updateUser('user-1', { name: 'New Name' });
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('user-1');
+    expect(user.save).toHaveBeenCalled();
+    expect(result.name).toBe('New Name');
+  });
+
+  it('updates user email successfully', async () => {
+    const user = { _id: 'user-1', name: 'Jane Doe', email: 'old@example.com', save: jest.fn().mockResolvedValue({ _id: 'user-1', name: 'Jane Doe', email: 'new@example.com' }) };
+    mockedUser.findById.mockResolvedValue(user);
+    mockedUser.findOne.mockResolvedValue(null);
+
+    const result = await updateUser('user-1', { email: 'new@example.com' });
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('user-1');
+    expect(mockedUser.findOne).toHaveBeenCalledWith({ email: 'new@example.com' });
+    expect(user.save).toHaveBeenCalled();
+    expect(result.email).toBe('new@example.com');
+  });
+
+  it('throws when updating email to one that already exists', async () => {
+    const user = { _id: 'user-1', name: 'Jane Doe', email: 'old@example.com' };
+    mockedUser.findById.mockResolvedValue(user);
+    mockedUser.findOne.mockResolvedValue({ _id: 'user-2', email: 'existing@example.com' });
+
+    await expect(updateUser('user-1', { email: 'existing@example.com' })).rejects.toThrow('Email already in use');
+
+    expect(mockedUser.findOne).toHaveBeenCalledWith({ email: 'existing@example.com' });
+  });
+
+  it('throws when updating a user that does not exist', async () => {
+    mockedUser.findById.mockResolvedValue(null);
+
+    await expect(updateUser('nonexistent-id', { name: 'New Name' })).rejects.toThrow('User not found');
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('nonexistent-id');
+  });
+
+  // changePassword tests
+  it('changes password successfully when old password is correct', async () => {
+    const user = { _id: 'user-1', password: 'hashed-old', save: jest.fn().mockResolvedValue({ _id: 'user-1', password: 'hashed-new' }) };
+    mockedUser.findById.mockResolvedValue(user);
+    mockedBcrypt.compare.mockResolvedValue(true);
+    mockedBcrypt.hash.mockResolvedValue('hashed-new');
+
+    const result = await changePassword('user-1', 'old-password', 'new-password');
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('user-1');
+    expect(mockedBcrypt.compare).toHaveBeenCalledWith('old-password', 'hashed-old');
+    expect(mockedBcrypt.hash).toHaveBeenCalledWith('new-password', 12);
+    expect(user.save).toHaveBeenCalled();
+    expect(result.password).toBe('hashed-new');
+  });
+
+  it('throws when old password is incorrect', async () => {
+    const user = { _id: 'user-1', password: 'hashed-old' };
+    mockedUser.findById.mockResolvedValue(user);
+    mockedBcrypt.compare.mockResolvedValue(false);
+
+    await expect(changePassword('user-1', 'wrong-password', 'new-password')).rejects.toThrow('Invalid password');
+
+    expect(mockedBcrypt.compare).toHaveBeenCalledWith('wrong-password', 'hashed-old');
+  });
+
+  it('throws when changing password for a user that does not exist', async () => {
+    mockedUser.findById.mockResolvedValue(null);
+
+    await expect(changePassword('nonexistent-id', 'old-password', 'new-password')).rejects.toThrow('User not found');
+
+    expect(mockedUser.findById).toHaveBeenCalledWith('nonexistent-id');
+  });
+
+  // deleteUser tests
+  it('deletes a user and removes their session', async () => {
+    const user = { _id: 'user-1', name: 'Jane Doe' };
+    mockedUser.findByIdAndDelete.mockResolvedValue(user);
+    mockedSession.findOneAndDelete.mockResolvedValue({ jwt: 'token' });
+
+    const result = await deleteUser('user-1', 'token');
+
+    expect(mockedUser.findByIdAndDelete).toHaveBeenCalledWith('user-1');
+    expect(mockedSession.findOneAndDelete).toHaveBeenCalledWith({ jwt: 'token' });
+    expect(result).toEqual(user);
+  });
+
+  it('throws when deleting a user that does not exist', async () => {
+    mockedUser.findByIdAndDelete.mockResolvedValue(null);
+
+    await expect(deleteUser('nonexistent-id', 'token')).rejects.toThrow('User not found');
+
+    expect(mockedUser.findByIdAndDelete).toHaveBeenCalledWith('nonexistent-id');
+  });
+
+  it('throws when deleting a session token that does not exist', async () => {
+    const user = { _id: 'user-1', name: 'Jane Doe' };
+    mockedUser.findByIdAndDelete.mockResolvedValue(user);
+    mockedSession.findOneAndDelete.mockRejectedValue(new Error('Invalid token'));
+
+    await expect(deleteUser('user-1', 'invalid-token')).rejects.toThrow('Invalid token');
+
+    expect(mockedUser.findByIdAndDelete).toHaveBeenCalledWith('user-1');
   });
 });

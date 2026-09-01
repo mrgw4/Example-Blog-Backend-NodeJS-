@@ -89,7 +89,7 @@ router.post('/logout', async (req: Request, res: Response): Promise<Response | v
         // Accept either "Bearer <token>" (case-insensitive) or a raw token.
         const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
 
-        if (!token) {
+        if (!token || token.length === 0) {
             // Authorization header present but token missing/malformed
             return res.status(401).json({ error: 'Invalid token' });
         }
@@ -112,11 +112,6 @@ router.post('/logout', async (req: Request, res: Response): Promise<Response | v
  */
 router.get('/:id', async (req: Request, res: Response): Promise<Response | void> => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-
-    if (!id || typeof id !== 'string') {
-        res.status(400).json({ error: 'Invalid user id' });
-        return;
-    }
 
     // Validate MongoDB ObjectId format to avoid Mongoose cast errors
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -223,16 +218,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
         // Accept either "Bearer <token>" (case-insensitive) or a raw token.
         const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
 
-        if (!token) {
+        if (!token || token.length === 0) {
             // Authorization header present but token missing/malformed
             return res.status(401).json({ error: 'Invalid token' });
         }
 
         const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-
-        if (!id || typeof id !== 'string') {
-            return res.status(400).json({ error: 'Invalid user ID' });
-        }
 
         // Validate MongoDB ObjectId format
         if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -269,10 +260,6 @@ router.put('/:id', async (req: Request, res: Response): Promise<Response | void>
     try {
         const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-        if (!id || typeof id !== 'string') {
-            return res.status(400).json({ error: 'Invalid user ID' });
-        }
-
         // Validate MongoDB ObjectId format
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: 'Invalid user id format' });
@@ -287,7 +274,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<Response | void>
         const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
         const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
 
-        if (!token) {
+        if (!token || token.length === 0) {
             return res.status(401).json({ error: 'Invalid token' });
         }
 
@@ -341,10 +328,6 @@ router.post('/:id/change-password', async (req: Request, res: Response): Promise
     try {
         const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
-        if (!id || typeof id !== 'string') {
-            return res.status(400).json({ error: 'Invalid user ID' });
-        }
-
         // Validate MongoDB ObjectId format
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: 'Invalid user id format' });
@@ -359,7 +342,7 @@ router.post('/:id/change-password', async (req: Request, res: Response): Promise
         const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
         const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
 
-        if (!token) {
+        if (!token || token.length === 0) {
             return res.status(401).json({ error: 'Invalid token' });
         }
 
