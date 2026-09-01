@@ -9,6 +9,7 @@ database-credentials.env
 
 # Build output
 dist/
+temp-storage/
 
 # Logs
 *.log
@@ -35,3 +36,4 @@ coverage/
 # Misc
 *.pem
 .cache/
+newman-report.json
