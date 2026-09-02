@@ -16,6 +16,28 @@ export async function getAllUsers() {
 }
 
 /**
+ * Retrieves paginated users from the database, omitting password and email fields.
+ * @param skip Number of documents to skip.
+ * @param limit Number of documents to return.
+ * @returns Promise resolving to the list of paginated users.
+ */
+export async function getUsersWithPagination(skip: number, limit: number) {
+    return User.find()
+       .select('-password -email')
+       .skip(skip)
+       .limit(limit)
+       .sort({ name: -1 });
+}
+
+/**
+ * Retrieves the total count of users in the database.
+ * @returns Promise resolving to the total number of users.
+ */
+export async function getTotalUserCount() {
+   return User.countDocuments();
+}
+
+/**
  * Retrieves a user by their ID from the database, omitting password and email fields.
  * @param id The user's ID.
  * @returns Promise resolving to the user document or null if not found.

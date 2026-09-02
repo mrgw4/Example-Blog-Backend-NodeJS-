@@ -2,6 +2,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import userRouter from './routes/users';
+import movieRouter from './routes/movies';
 import testResetHandler from './testhelper/testResetHandler';
 
 
@@ -42,6 +43,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 app.use('/api/users', userRouter);
+app.use('/api/movies', movieRouter);
 app.use('/api/testreset', testResetHandler);
 
 /**

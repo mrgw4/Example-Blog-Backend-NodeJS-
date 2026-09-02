@@ -14,15 +14,33 @@ const CreateUserSchema = z.object({
   password: z.string().min(6).max(100)});
 
 /**
- * GET /api/users
- * Returns all users, excluding sensitive fields.
-
+ * GET /api/users?page=1&limit=20
+ * Returns paginated users, excluding sensitive fields.
  */
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const users = await user.getAllUsers();
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
+    const skip = (page - 1) * limit;
 
-    res.status(200).json(users);
+    const [users, total] = await Promise.all([
+      user.getUsersWithPagination(skip, limit),
+      user.getTotalUserCount()
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      data: users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
     
     } 
     catch (error) {
