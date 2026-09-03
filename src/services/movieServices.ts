@@ -138,6 +138,7 @@ export async function createMovie(movieData: any) {
 
   return Movie.create(movieData);
 }
+
 /**
  * Deletes a movie by its ID.
  * @param id The movie's ID.
@@ -145,4 +146,14 @@ export async function createMovie(movieData: any) {
  */
 export async function deleteMovie(id: string) {
   return Movie.findByIdAndDelete(id);
+}
+
+/**
+ * Updates a movie by its ID.
+ * @param id The movie's ID.
+ * @param updateData The fields to update.
+ * @returns Promise resolving to the updated movie document or null if not found.
+ */
+export async function updateMovie(id: string, updateData: any) {
+  return Movie.findByIdAndUpdate(id, updateData, { new: true });
 }
