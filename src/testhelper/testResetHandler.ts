@@ -1,15 +1,22 @@
 import { Router, Request, Response } from 'express';
+
 import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
 const SOURCE_DB_NAME = 'sample_mflix';
+
 const COLLECTIONS_TO_COPY = ['movies', 'comments', 'users'];
 
-/**
- * Turns "/blog_test" into "blog_test"
- * and "blog_test" into "blog_test"
- */
+const SALT_ROUNDS = 12;
+
+// Test account used after a database reset.
+// These credentials are for development/testing only.
+const TEST_ADMIN_NAME = 'Test Admin';
+const TEST_ADMIN_EMAIL = 'admin@test.local';
+const TEST_ADMIN_PASSWORD = 'admin123';
+
 /**
  * Normalises a database selection string by removing any leading slashes.
  *
@@ -48,10 +55,60 @@ export async function copyCollection(
 }
 
 /**
- * Resets the configured test database by copying documents from the source dataset.
+ * Creates the known test administrator account and configures
+ * the admins collection to reference that account.
  *
- * @returns An object mapping collection names to the number of documents copied.
- * @throws {Error} When configuration is invalid, connection is unavailable, or the source/target databases cannot be accessed.
+ * The password is hashed using bcrypt so that the account can
+ * authenticate through the normal login process.
+ *
+ * @param targetDb The target test database.
+ * @returns The ID of the created test administrator.
+ */
+export async function createTestAdmin(
+  targetDb: mongoose.mongo.Db
+): Promise<mongoose.Types.ObjectId> {
+  const usersCollection = targetDb.collection('users');
+  const adminsCollection = targetDb.collection('admins');
+
+  const hashedPassword = await bcrypt.hash(
+    TEST_ADMIN_PASSWORD,
+    SALT_ROUNDS
+  );
+
+  const userResult = await usersCollection.insertOne({
+    name: TEST_ADMIN_NAME,
+    email: TEST_ADMIN_EMAIL,
+    password: hashedPassword,
+  });
+
+  const userId = userResult.insertedId;
+
+  // Reset the administrator configuration so the test database
+  // always has exactly the known test administrator.
+  await adminsCollection.deleteMany({});
+
+  await adminsCollection.insertOne({
+    userId,
+  });
+
+  // Ensure a user cannot be assigned as an administrator more than once.
+  await adminsCollection.createIndex(
+    { userId: 1 },
+    { unique: true }
+  );
+
+  return userId;
+}
+
+/**
+ * Resets the configured test database by copying documents from
+ * the source dataset and creating a known test administrator.
+ *
+ * @returns An object mapping collection names to the number of
+ *          documents copied, plus the number of admins created.
+ * @throws {Error} When configuration is invalid, connection is
+ *                 unavailable, or the source/target databases
+ *                 cannot be accessed.
  */
 export async function resetTestDatabase(): Promise<Record<string, number>> {
   const dbSelection = process.env.DATABASE_SELECTION || '/blog_test';
@@ -61,41 +118,59 @@ export async function resetTestDatabase(): Promise<Record<string, number>> {
     throw new Error('DATABASE_SELECTION is missing or invalid');
   }
 
-  // Safety guard: refuse to run unless the selected DB looks like a test DB
+  // Safety guard: refuse to run unless the selected DB looks like a test DB.
   if (!targetDbName.toLowerCase().includes('test')) {
     throw new Error(
       `Refusing to reset database "${targetDbName}" because it does not appear to be a test database`
     );
   }
 
-  // We are already connected via mongoose.connect(...) in index.ts,
-  // so reuse the existing mongoose connection and switch DBs from it.
   const baseConnection = mongoose.connection;
 
   if (!baseConnection.db) {
     throw new Error('MongoDB is not connected');
   }
 
-  const sourceConn = baseConnection.useDb(SOURCE_DB_NAME, { useCache: true });
-  const targetConn = baseConnection.useDb(targetDbName, { useCache: true });
+  const sourceConn = baseConnection.useDb(SOURCE_DB_NAME, {
+    useCache: true,
+  });
+
+  const targetConn = baseConnection.useDb(targetDbName, {
+    useCache: true,
+  });
 
   const sourceDb = sourceConn.db;
   const targetDb = targetConn.db;
 
   if (!sourceDb) {
-    throw new Error(`Could not access source database "${SOURCE_DB_NAME}"`);
+    throw new Error(
+      `Could not access source database "${SOURCE_DB_NAME}"`
+    );
   }
 
   if (!targetDb) {
-    throw new Error(`Could not access target database "${targetDbName}"`);
+    throw new Error(
+      `Could not access target database "${targetDbName}"`
+    );
   }
 
   const results: Record<string, number> = {};
 
+  // Restore the standard MFlix collections.
   for (const collectionName of COLLECTIONS_TO_COPY) {
-    const copiedCount = await copyCollection(sourceDb, targetDb, collectionName);
+    const copiedCount = await copyCollection(
+      sourceDb,
+      targetDb,
+      collectionName
+    );
+
     results[collectionName] = copiedCount;
   }
+
+  // Create the application's administrator configuration.
+  await createTestAdmin(targetDb);
+
+  results.admin = 1;
 
   return results;
 }
@@ -118,17 +193,23 @@ export async function handleResetRouteInternal(
     return res.status(200).json({
       message: 'Test database reset successfully',
       sourceDatabase: SOURCE_DB_NAME,
-      targetDatabase: normaliseDbName(process.env.DATABASE_SELECTION || '/blog_test'),
+      targetDatabase: normaliseDbName(
+        process.env.DATABASE_SELECTION || '/blog_test'
+      ),
       copiedCollections,
     });
   } catch (error) {
     console.error('Test database reset failed:', error);
 
     if (error instanceof Error) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({
+        error: error.message,
+      });
     }
 
-    return res.status(500).json({ error: 'Failed to reset test database' });
+    return res.status(500).json({
+      error: 'Failed to reset test database',
+    });
   }
 }
 
