@@ -1,13 +1,5 @@
 import * as resetModule from '../testhelper/testResetHandler';
-import mongoose from 'mongoose';
 import { Request, Response } from 'express';
-
-jest.mock('mongoose', () => ({
-  connection: {
-    db: {},
-    useDb: jest.fn(),
-  },
-}));
 
 describe('reset route handler', () => {
   beforeEach(() => {
@@ -25,45 +17,72 @@ describe('reset route handler', () => {
   }
 
   it('returns 200 when reset route succeeds', async () => {
-    const sourceCollection = {
-      find: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([{ a: 1 }]) }),
-    };
-
-    const targetCollection = {
-      deleteMany: jest.fn().mockResolvedValue(undefined),
-      insertMany: jest.fn().mockResolvedValue(undefined),
-    };
-
-    const useDbMock = mongoose.connection.useDb as jest.Mock;
-    useDbMock
-      .mockReturnValueOnce({ db: { collection: jest.fn().mockReturnValue(sourceCollection) } })
-      .mockReturnValueOnce({ db: { collection: jest.fn().mockReturnValue(targetCollection) } });
+    const resetFn = jest.fn().mockResolvedValue({
+      movies: 10,
+      comments: 20,
+      users: 5,
+      admin: 1,
+    });
 
     const res = createMockResponse();
-    await resetModule.handleResetRoute({} as Request, res);
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'Test database reset successfully' })
+    await resetModule.handleResetRouteInternal(
+      {} as Request,
+      res,
+      resetFn
     );
+
+    expect(resetFn).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Test database reset successfully',
+      sourceDatabase: 'sample_mflix',
+      targetDatabase: 'blog_test',
+      copiedCollections: {
+        movies: 10,
+        comments: 20,
+        users: 5,
+        admin: 1,
+      },
+    });
   });
 
   it('returns 400 when reset route throws a standard Error', async () => {
     const error = new Error('boom');
+    const resetFn = jest.fn().mockRejectedValue(error);
     const res = createMockResponse();
 
-    await (resetModule as any).handleResetRouteInternal({} as Request, res, () => Promise.reject(error));
+    jest.spyOn(console, 'error').mockImplementation(() => { });
+
+    await resetModule.handleResetRouteInternal(
+      {} as Request,
+      res,
+      resetFn
+    );
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'boom' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'boom',
+    });
   });
 
   it('returns 500 when reset route throws a non-Error', async () => {
+    const resetFn = jest.fn().mockRejectedValue({
+      foo: 'bar',
+    });
     const res = createMockResponse();
 
-    await (resetModule as any).handleResetRouteInternal({} as Request, res, () => Promise.reject({ foo: 'bar' } as any));
+    jest.spyOn(console, 'error').mockImplementation(() => { });
+
+    await resetModule.handleResetRouteInternal(
+      {} as Request,
+      res,
+      resetFn
+    );
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Failed to reset test database' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Failed to reset test database',
+    });
   });
 });

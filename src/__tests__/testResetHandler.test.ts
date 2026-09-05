@@ -325,12 +325,36 @@ describe('testResetHandler', () => {
   it('uses the default test database when DATABASE_SELECTION is not set', async () => {
     delete process.env.DATABASE_SELECTION;
 
-    await expect(resetTestDatabase()).resolves.toEqual({
-      movies: 1,
-      comments: 1,
-      users: 1,
-      admin: 1,
-    });
+    const sourceDb = {
+      collection: jest.fn(() => ({
+        find: jest.fn(() => ({
+          toArray: jest.fn().mockResolvedValue([]),
+        })),
+      })),
+    };
+
+    const targetDb = {
+      collection: jest.fn(() => ({
+        deleteMany: jest.fn().mockResolvedValue(undefined),
+        insertMany: jest.fn().mockResolvedValue(undefined),
+        insertOne: jest.fn().mockResolvedValue({
+          insertedId: 'test-admin-id',
+        }),
+        createIndex: jest.fn().mockResolvedValue('userId_1'),
+      })),
+    };
+
+    (mongoose.connection.useDb as jest.Mock)
+      .mockReturnValueOnce({ db: sourceDb })
+      .mockReturnValueOnce({ db: targetDb });
+
+    await resetTestDatabase();
+
+    expect(mongoose.connection.useDb).toHaveBeenNthCalledWith(
+      2,
+      'blog_test',
+      { useCache: true }
+    );
   });
 
   it('uses blog_test as the route response target when DATABASE_SELECTION is not set', async () => {

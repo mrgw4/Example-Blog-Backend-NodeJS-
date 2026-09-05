@@ -27,16 +27,16 @@ describe('users route', () => {
   });
 
   it('returns 200 and users on successful GET', async () => {
-    mockedServices.getAllUsers.mockResolvedValue([{ id: '1', name: 'Jane Doe' }] as any);
+    mockedServices.getUsersWithPagination.mockResolvedValue([{ id: '1', name: 'Jane Doe' }] as any);
 
-    const response = await request(app).get('/api/users');
+    const response = await request(app).get('/api/users?page=1&limit=10');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual([{ id: '1', name: 'Jane Doe' }]);
+    expect(response.body).toEqual({ "data": [{ "id": "1", "name": "Jane Doe" }], "pagination": { "hasNextPage": false, "hasPrevPage": false, "limit": 10, "page": 1, "pages": null } });
   });
 
-  it('returns 503 when getAllUsers throws a connect error', async () => {
-    mockedServices.getAllUsers.mockRejectedValue(new Error('connect failed'));
+  it('returns 503 when getUsersWithPagination throws a connect error', async () => {
+    mockedServices.getUsersWithPagination.mockRejectedValue(new Error('connect failed'));
 
     const response = await request(app).get('/api/users');
 
@@ -44,8 +44,8 @@ describe('users route', () => {
     expect(response.body).toEqual({ error: 'Database unavailable' });
   });
 
-  it('returns 500 when getAllUsers fails unexpectedly', async () => {
-    mockedServices.getAllUsers.mockRejectedValue(new Error('unexpected failure'));
+  it('returns 500 when getUsersWithPagination fails unexpectedly', async () => {
+    mockedServices.getUsersWithPagination.mockRejectedValue(new Error('unexpected failure'));
 
     const response = await request(app).get('/api/users');
 
