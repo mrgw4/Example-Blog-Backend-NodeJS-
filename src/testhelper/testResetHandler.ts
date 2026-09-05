@@ -83,15 +83,12 @@ export async function createTestAdmin(
 
   const userId = userResult.insertedId;
 
-  // Reset the administrator configuration so the test database
-  // always has exactly the known test administrator.
   await adminsCollection.deleteMany({});
 
   await adminsCollection.insertOne({
     userId,
   });
 
-  // Ensure a user cannot be assigned as an administrator more than once.
   await adminsCollection.createIndex(
     { userId: 1 },
     { unique: true }
