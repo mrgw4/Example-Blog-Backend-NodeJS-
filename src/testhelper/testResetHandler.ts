@@ -89,6 +89,7 @@ export async function createTestAdmin(
     userId,
   });
 
+
   await adminsCollection.createIndex(
     { userId: 1 },
     { unique: true }

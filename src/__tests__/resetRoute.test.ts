@@ -85,4 +85,13 @@ describe('reset route handler', () => {
       error: 'Failed to reset test database',
     });
   });
+
+  it('returns the response from the internal handler', async () => {
+    const req = {} as Request;
+    const res = createMockResponse();
+
+    const result = await resetModule.handleResetRoute(req, res);
+
+    expect(result).toBe(res);
+  });
 });
