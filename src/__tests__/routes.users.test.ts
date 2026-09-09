@@ -129,6 +129,13 @@ describe('users route', () => {
     expect(response.body).toEqual({ error: 'Invalid token' });
   });
 
+  it('returns 401 when logout is given an invalid token format', async () => {
+    const response = await request(app).post('/api/users/logout').set('Authorization', 'wrong format');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid authorization format' });
+  });
+
   it('returns 503 when logout encounters a database connection error', async () => {
     mockedServices.deleteSessionToken.mockRejectedValue(new Error('connect failed during logout'));
 
@@ -327,6 +334,18 @@ describe('users route', () => {
     expect(response.body).toEqual({ error: 'Invalid or expired token' });
   });
 
+  it('returns 401 when update receives an invalid token format', async () => {
+    mockedServices.verifySessionToken.mockRejectedValue(new Error('Invalid token'));
+
+    const response = await request(app)
+      .put('/api/users/507f1f77bcf86cd799439011')
+      .set('Authorization', 'invalid-token')
+      .send({ name: 'Updated Name' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid authorization format' });
+  });
+
   it('returns 401 when update token does not match user ID', async () => {
     mockedServices.verifySessionToken.mockResolvedValue({ userId: 'user-2' } as any);
 
@@ -461,6 +480,18 @@ describe('users route', () => {
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: 'Invalid or expired token' });
+  });
+
+  it('returns 401 when change-password receives an invalid token format', async () => {
+    mockedServices.verifySessionToken.mockRejectedValue(new Error('Invalid token'));
+
+    const response = await request(app)
+      .post('/api/users/507f1f77bcf86cd799439011/change-password')
+      .set('Authorization', 'invalid-token')
+      .send({ oldPassword: 'old-pass', newPassword: 'new-pass' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid authorization format' });
   });
 
   it('returns 401 when change-password token does not match user ID', async () => {
@@ -615,6 +646,17 @@ describe('users route', () => {
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: 'Unauthorized' });
+  });
+
+  it('returns 401 when delete token is the wrong format', async () => {
+    mockedServices.verifySessionToken.mockResolvedValue({ userId: 'user-2' } as any);
+
+    const response = await request(app)
+      .delete('/api/users/507f1f77bcf86cd799439011')
+      .set('Authorization', 'invalid token');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid authorization format' });
   });
 
   it('returns 400 when delete has invalid ID format', async () => {

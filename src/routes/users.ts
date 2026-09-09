@@ -100,18 +100,26 @@ router.post('/logout', async (req: Request, res: Response): Promise<Response | v
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        // Accept either "Bearer <token>" (case-insensitive) or a raw token.
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            // Authorization header present but token missing/malformed
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
         }
 
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
+        }
         await user.deleteSessionToken(token);
 
         return res.status(200).json({ message: 'Logged out successfully' });
@@ -229,16 +237,25 @@ router.delete('/:id', async (req: Request, res: Response) => {
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        // Accept either "Bearer <token>" (case-insensitive) or a raw token.
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            // Authorization header present but token missing/malformed
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
+        }
+
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
         }
 
         const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -286,14 +303,25 @@ router.put('/:id', async (req: Request, res: Response): Promise<Response | void>
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
+        }
+
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
         }
 
         const verified = await user.verifySessionToken(token);
@@ -354,14 +382,25 @@ router.post('/:id/change-password', async (req: Request, res: Response): Promise
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
+        }
+
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
         }
 
         const verified = await user.verifySessionToken(token);

@@ -12,7 +12,7 @@ const TOKEN_MAX_AGE_MS = 60 * 60 * 1000;
  * @returns Promise resolving to the list of users.
  */
 export async function getAllUsers() {
-   return User.find().select('-password -email').sort({ name: -1 });
+    return User.find().select('-password -email').sort({ name: -1 });
 }
 
 /**
@@ -23,10 +23,10 @@ export async function getAllUsers() {
  */
 export async function getUsersWithPagination(skip: number, limit: number) {
     return User.find()
-       .select('-password -email')
-       .skip(skip)
-       .limit(limit)
-       .sort({ name: -1 });
+        .select('-password -email')
+        .skip(skip)
+        .limit(limit)
+        .sort({ name: -1 });
 }
 
 /**
@@ -34,7 +34,7 @@ export async function getUsersWithPagination(skip: number, limit: number) {
  * @returns Promise resolving to the total number of users.
  */
 export async function getTotalUserCount() {
-   return User.countDocuments();
+    return User.countDocuments();
 }
 
 /**
@@ -43,7 +43,7 @@ export async function getTotalUserCount() {
  * @returns Promise resolving to the user document or null if not found.
  */
 export async function getUser(id: string) {
-   return User.findById(id);
+    return User.findById(id);
 }
 
 /**
@@ -53,17 +53,17 @@ export async function getUser(id: string) {
  * @returns Promise resolving to the created user document.
  * @throws {Error} when the email is already in use.
  */
-export async function createUser(userData: { name:string; email: string; password: string }){
+export async function createUser(userData: { name: string; email: string; password: string }) {
 
-    const user = await User.findOne({email: userData.email});
+    const user = await User.findOne({ email: userData.email });
 
     if (user) {
         throw new Error('Email already in use');
     }
 
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
-    
-    return User.create({name: userData.name, email: userData.email, password: hashedPassword,});
+
+    return User.create({ name: userData.name, email: userData.email, password: hashedPassword, });
 }
 
 /**

@@ -1,4 +1,4 @@
-import { createUser, getAllUsers, loginUser, createSession, verifySessionToken, deleteSessionToken, getUser, updateUser, changePassword, deleteUser } from '../services/userServices';
+import { createUser, getAllUsers, loginUser, createSession, verifySessionToken, deleteSessionToken, getUser, updateUser, changePassword, deleteUser, getUsersWithPagination, getTotalUserCount } from '../services/userServices';
 import User from '../models/User';
 import Session from '../models/Session';
 import bcrypt from 'bcrypt';
@@ -12,6 +12,9 @@ jest.mock('../models/User', () => ({
     findById: jest.fn(),
     findByIdAndDelete: jest.fn(),
     create: jest.fn(),
+    skip: jest.fn(),
+    limit: jest.fn(),
+    countDocuments: jest.fn(),
   },
 }));
 
@@ -36,6 +39,9 @@ const mockedUser = User as unknown as {
   findById: jest.Mock;
   findByIdAndDelete: jest.Mock;
   create: jest.Mock;
+  countDocuments: jest.Mock;
+  skip: jest.Mock;
+  limit: jest.Mock;
 };
 
 const mockedSession = Session as unknown as {
@@ -69,6 +75,35 @@ describe('userServices', () => {
     expect(query.select).toHaveBeenCalledWith('-password -email');
     expect(query.sort).toHaveBeenCalledWith({ name: -1 });
     expect(result).toEqual([{ _id: 'user-1', name: 'Jane Doe' }]);
+  });
+
+  it('getUsersWithPagination returns users without password or email fields', async () => {
+    const query = {
+      select: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockResolvedValue([{ _id: 'user-1', name: 'Jane Doe' }]),
+    };
+
+    mockedUser.find.mockReturnValue(query);
+
+    const result = await getUsersWithPagination(1, 10);
+
+    expect(mockedUser.find).toHaveBeenCalled();
+    expect(query.select).toHaveBeenCalledWith('-password -email');
+    expect(query.skip).toHaveBeenCalledWith(1);
+    expect(query.limit).toHaveBeenCalledWith(10);
+    expect(query.sort).toHaveBeenCalledWith({ name: -1 });
+    expect(result).toEqual([{ _id: 'user-1', name: 'Jane Doe' }]);
+  });
+
+  it('getTotalUserCount returns total user count', async () => {
+    mockedUser.countDocuments.mockResolvedValue(5);
+
+    const result = await getTotalUserCount();
+
+    expect(mockedUser.countDocuments).toHaveBeenCalled();
+    expect(result).toBe(5);
   });
 
   it('throws when createUser is called with an existing email', async () => {
@@ -143,6 +178,18 @@ describe('userServices', () => {
     const token = jwt.sign({ id: 'user-1', email: 'test@example.com' }, 'dev-secret', { expiresIn: '1h' });
     mockedSession.findOne.mockResolvedValue({
       createdAt: new Date(Date.now() - 1000),
+      _id: 'session-1',
+    });
+
+    const result = await verifySessionToken(token);
+
+    expect(result.userId).toBe('user-1');
+    expect(result.email).toBe('test@example.com');
+  });
+
+  it('verifies a session token successfully', async () => {
+    const token = jwt.sign({ id: 'user-1', email: 'test@example.com' }, 'dev-secret', { expiresIn: '1h' });
+    mockedSession.findOne.mockResolvedValue({
       _id: 'session-1',
     });
 
