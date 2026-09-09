@@ -110,6 +110,7 @@ describe('movies route', () => {
     expect(response.body).toEqual({ error: 'Invalid movie id format' });
   });
 
+  // POST /api/movies tests (create movie)
   it('returns 201 when createMovie succeeds', async () => {
     mockedServices.createMovie.mockResolvedValue({} as any);
 
@@ -134,6 +135,16 @@ describe('movies route', () => {
 
     expect(response.status).toBe(503);
     expect(response.body).toEqual({ error: 'Database unavailable' });
+  });
+
+  it('returns 500 when createMovie throws a non-Error', async () => {
+    mockedServices.createMovie.mockRejectedValue(new Error('Unknown'));
+
+    const response = await request(app).post('/api/movies').send({ movieTestData });
+
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: 'Failed to create movie' });
   });
 
   it('returns 500 when createMovie throws a non-Error', async () => {
