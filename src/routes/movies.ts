@@ -1,8 +1,71 @@
 import { Router, Request, Response } from 'express';
 import * as movieService from '../services/movieServices';
 import mongoose from 'mongoose';
+import { z } from 'zod';
 
 const router = Router();
+
+const AwardsSchema = z.object({
+  nominations: z.number(),
+  text: z.string(),
+  wins: z.number(),
+});
+
+const ImdbSchema = z.object({
+  id: z.number(),
+  rating: z.union([z.number(), z.string()]),
+  votes: z.union([z.number(), z.string()]),
+});
+
+const TomatoesViewerSchema = z.object({
+  meter: z.number().optional(),
+  numReviews: z.number(),
+  rating: z.number(),
+});
+
+const TomatoesCriticSchema = z.object({
+  meter: z.number(),
+  numReviews: z.number(),
+  rating: z.number(),
+});
+
+const TomatoesSchema = z.object({
+  boxOffice: z.string().optional(),
+  consensus: z.string().optional(),
+  critic: TomatoesCriticSchema.optional(),
+  dvd: z.coerce.date().optional(),
+  fresh: z.number().optional(),
+  lastUpdated: z.coerce.date(),
+  production: z.string().optional(),
+  rotten: z.number().optional(),
+  viewer: TomatoesViewerSchema,
+  website: z.string().optional(),
+});
+
+export const MovieSchema = z.object({
+  awards: AwardsSchema,
+  imdb: ImdbSchema,
+  lastupdated: z.string(),
+  num_mflix_comments: z.number(),
+  title: z.string(),
+  type: z.string(),
+  year: z.union([z.number(), z.string()]),
+
+  cast: z.array(z.string()).optional(),
+  countries: z.array(z.string()).optional(),
+  directors: z.array(z.string()).optional(),
+  fullplot: z.string().optional(),
+  genres: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
+  metacritic: z.number().optional(),
+  plot: z.string().optional(),
+  poster: z.string().optional(),
+  rated: z.string().optional(),
+  released: z.coerce.date().optional(),
+  runtime: z.number().optional(),
+  tomatoes: TomatoesSchema.optional(),
+  writers: z.array(z.string()).optional(),
+});
 
 /**
  * GET /api/movies?page=1&limit=20
@@ -80,13 +143,49 @@ router.get('/:id', async (req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const result = MovieSchema.safeParse(req.body);
+
+    if (!result.success) {
+      const requiredFields = [
+        'title',
+        'type',
+        'year',
+        'num_mflix_comments',
+        'lastupdated',
+        'awards',
+        'imdb',
+      ];
+
+      const missingFields = requiredFields.filter(
+        (field) => req.body[field] === undefined || req.body[field] === null
+      );
+
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          error: `Missing required fields`,
+          fields: missingFields,
+        });
+      }
+
+      const invalidFields = result.error.issues.map(
+        (issue) => issue.path.join('.')
+      );
+
+      return res.status(400).json({
+        error: 'Invalid movie data',
+        fields: invalidFields,
+      });
+    }
+
     await movieService.createMovie(req.body);
     return res.status(201).json({ message: 'Movie created successfully' });
   } catch (error) {
     if (error instanceof Error) {
-      // If it's a validation error (missing required fields)
-      if (error.message.includes('Missing required fields')) {
-        return res.status(400).json({ error: error.message });
+      if (error instanceof mongoose.Error.ValidationError) {
+        return res.status(400).json({
+          error: 'Invalid movie data',
+          fields: Object.keys(error.errors),
+        });
       }
       // Database connection errors
       if (error.message.includes('connect')) {

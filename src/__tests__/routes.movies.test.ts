@@ -2,6 +2,7 @@ import request from 'supertest';
 import express, { Express } from 'express';
 import movieRouter from '../routes/movies';
 import * as movieServices from '../services/movieServices';
+import mongoose from 'mongoose';
 
 jest.mock('../services/movieServices');
 
@@ -121,11 +122,48 @@ describe('movies route', () => {
   });
 
   it('returns 400 when required fields are missing', async () => {
-    mockedServices.createMovie.mockRejectedValue(new Error('Missing required fields: title, type, year, num_mflix_comments, lastupdated, awards, imdb'));
     const response = await request(app).post('/api/movies').send({});
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: 'Missing required fields: title, type, year, num_mflix_comments, lastupdated, awards, imdb' });
+    expect(response.body).toEqual({
+      error: 'Missing required fields',
+      fields: ['title', "type", "year", "num_mflix_comments", "lastupdated", "awards", "imdb",],
+    });
+  });
+
+  it('returns 400 when fields are invalid', async () => {
+    const modifiedTestData = { ...movieTestData, title: 123 };
+    const response = await request(app).post('/api/movies').send(modifiedTestData);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Invalid movie data',
+      fields: ["title"],
+    });
+  });
+
+  it('returns 400 with invalid Mongoose fields', async () => {
+    const validationError = new mongoose.Error.ValidationError();
+
+    validationError.addError(
+      'title',
+      new mongoose.Error.ValidatorError({
+        path: 'title',
+        message: 'Please provide a title',
+      })
+    );
+
+    mockedServices.createMovie.mockRejectedValue(validationError);
+
+    const response = await request(app)
+      .post('/api/movies')
+      .send(movieTestData);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Invalid movie data',
+      fields: ['title'],
+    });
   });
 
   it('returns 503 when createMovie throws a connect error', async () => {
@@ -137,10 +175,10 @@ describe('movies route', () => {
     expect(response.body).toEqual({ error: 'Database unavailable' });
   });
 
-  it('returns 500 when createMovie throws a non-Error', async () => {
+  it('returns 500 when createMovie throws an unexpected Error', async () => {
     mockedServices.createMovie.mockRejectedValue(new Error('Unknown'));
 
-    const response = await request(app).post('/api/movies').send({ movieTestData });
+    const response = await request(app).post('/api/movies').send(movieTestData);
 
 
     expect(response.status).toBe(500);
@@ -150,16 +188,15 @@ describe('movies route', () => {
   it('returns 500 when createMovie throws a non-Error', async () => {
     mockedServices.createMovie.mockRejectedValue({ foo: 'bar' });
 
-    const response = await request(app).post('/api/movies').send({
-      name: 'Jane Doe',
-      email: 'test@example.com',
-      password: 'password',
-    });
+    const response = await request(app).post('/api/movies').send(movieTestData);
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: 'Failed to create movie' });
   });
 
+
+
+  // PUT /api/movies/:id tests
   it('returns 200 when updateMovie succeeds', async () => {
     mockedServices.updateMovie.mockResolvedValue(movieTestData as any);
 

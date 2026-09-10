@@ -62,15 +62,15 @@ const AwardsSchema: Schema = new Schema<IAwards>(
   {
     nominations: {
       type: Number,
-      required: [true, 'Awards nominations is required'],
+      required: [true, 'Please provide the number of nominations'],
     },
     text: {
       type: String,
-      required: [true, 'Awards text is required'],
+      required: [true, 'Please provide the awards information'],
     },
     wins: {
       type: Number,
-      required: [true, 'Awards wins is required'],
+      required: [true, 'Please provide the number of wins'],
     },
   },
   { _id: false }
@@ -80,15 +80,15 @@ const ImdbSchema: Schema = new Schema<IImdb>(
   {
     id: {
       type: Number,
-      required: [true, 'IMDb ID is required'],
+      required: [true, 'Please provide the IMDb ID'],
     },
     rating: {
       type: Schema.Types.Mixed,
-      required: [true, 'IMDb rating is required'],
+      required: [true, 'Please provide an IMDb rating'],
     },
     votes: {
       type: Schema.Types.Mixed,
-      required: [true, 'IMDb votes is required'],
+      required: [true, 'Please provide the number of IMDb votes'],
     },
   },
   { _id: false }
@@ -99,11 +99,11 @@ const TomatoesViewerSchema: Schema = new Schema(
     meter: Number,
     numReviews: {
       type: Number,
-      required: [true, 'Tomatoes viewer numReviews is required'],
+      required: [true, 'Please provide the number of viewer reviews'],
     },
     rating: {
       type: Number,
-      required: [true, 'Tomatoes viewer rating is required'],
+      required: [true, 'Please provide the viewer rating'],
     },
   },
   { _id: false }
@@ -113,15 +113,15 @@ const TomatoesCriticSchema: Schema = new Schema(
   {
     meter: {
       type: Number,
-      required: [true, 'Tomatoes critic meter is required'],
+      required: [true, 'Please provide the critic meter'],
     },
     numReviews: {
       type: Number,
-      required: [true, 'Tomatoes critic numReviews is required'],
+      required: [true, 'Please provide the number of critic reviews'],
     },
     rating: {
       type: Number,
-      required: [true, 'Tomatoes critic rating is required'],
+      required: [true, 'Please provide the critic rating'],
     },
   },
   { _id: false }
@@ -136,13 +136,13 @@ const TomatoesSchema: Schema = new Schema<ITomatoes>(
     fresh: Number,
     lastUpdated: {
       type: Date,
-      required: [true, 'Tomatoes lastUpdated is required'],
+      required: [true, 'Please provide the Tomatoes last updated date'],
     },
     production: String,
     rotten: Number,
     viewer: {
       type: TomatoesViewerSchema,
-      required: [true, 'Tomatoes viewer is required'],
+      required: [true, 'Please provide Tomatoes viewer information'],
     },
     website: String,
   },
@@ -153,7 +153,7 @@ const MovieSchema: Schema = new Schema<IMovie>(
   {
     awards: {
       type: AwardsSchema,
-      required: [true, 'Awards is required'],
+      required: [true, 'Please provide awards information'],
     },
     cast: [String],
     countries: [String],
@@ -162,17 +162,17 @@ const MovieSchema: Schema = new Schema<IMovie>(
     genres: [String],
     imdb: {
       type: ImdbSchema,
-      required: [true, 'IMDb is required'],
+      required: [true, 'Please provide IMDb information'],
     },
     languages: [String],
     lastupdated: {
       type: String,
-      required: [true, 'Last updated is required'],
+      required: [true, 'Please provide the last updated date'],
     },
     metacritic: Number,
     num_mflix_comments: {
       type: Number,
-      required: [true, 'Number of MFlix comments is required'],
+      required: [true, 'Please provide the number of MFlix comments'],
     },
     plot: String,
     poster: String,
@@ -181,17 +181,17 @@ const MovieSchema: Schema = new Schema<IMovie>(
     runtime: Number,
     title: {
       type: String,
-      required: [true, 'Title is required'],
+      required: [true, 'Please provide a title'],
     },
     tomatoes: TomatoesSchema,
     type: {
       type: String,
-      required: [true, 'Type is required'],
+      required: [true, 'Please provide a type'],
     },
     writers: [String],
     year: {
       type: Schema.Types.Mixed,
-      required: [true, 'Year is required'],
+      required: [true, 'Please provide a year'],
     },
   },
   {
