@@ -2,6 +2,8 @@ import User from '../models/User';
 import Session from '../models/Session';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import Admin from '../models/Admin';
+import mongoose from 'mongoose';
 
 const SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -128,6 +130,20 @@ export async function verifySessionToken(token: string) {
     }
 
     return { userId: decoded.id, email: decoded.email, session };
+}
+
+export async function verifyAdmin(token: string) {
+    const { userId } = await verifySessionToken(token);
+
+    const admin = await Admin.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+    });
+
+    if (!admin) {
+        throw new Error('User is not an admin');
+    }
+
+    return userId;
 }
 
 /**

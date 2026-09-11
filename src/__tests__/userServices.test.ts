@@ -1,8 +1,10 @@
-import { createUser, getAllUsers, loginUser, createSession, verifySessionToken, deleteSessionToken, getUser, updateUser, changePassword, deleteUser, getUsersWithPagination, getTotalUserCount } from '../services/userServices';
+import { createUser, getAllUsers, loginUser, createSession, verifySessionToken, deleteSessionToken, getUser, updateUser, changePassword, deleteUser, getUsersWithPagination, getTotalUserCount, verifyAdmin } from '../services/userServices';
 import User from '../models/User';
 import Session from '../models/Session';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import Admin from '../models/Admin';
+import mongoose from 'mongoose';
 
 jest.mock('../models/User', () => ({
   __esModule: true,
@@ -25,6 +27,13 @@ jest.mock('../models/Session', () => ({
     findOne: jest.fn(),
     deleteOne: jest.fn(),
     findOneAndDelete: jest.fn(),
+  },
+}));
+
+jest.mock('../models/Admin', () => ({
+  __esModule: true,
+  default: {
+    findOne: jest.fn(),
   },
 }));
 
@@ -54,6 +63,10 @@ const mockedSession = Session as unknown as {
 const mockedBcrypt = bcrypt as unknown as {
   hash: jest.Mock;
   compare: jest.Mock;
+};
+
+const mockedAdmin = Admin as unknown as {
+  findOne: jest.Mock;
 };
 
 describe('userServices', () => {
@@ -382,5 +395,89 @@ describe('userServices', () => {
     await expect(deleteUser('user-1', 'invalid-token')).rejects.toThrow('Invalid token');
 
     expect(mockedUser.findByIdAndDelete).toHaveBeenCalledWith('user-1');
+  });
+
+  // verifyAdmin tests
+  it('verifies an admin session token successfully', async () => {
+    const userId = new mongoose.Types.ObjectId();
+
+    const token = jwt.sign(
+      { id: userId.toString(), email: 'admin@example.com' },
+      'dev-secret',
+      { expiresIn: '1h' }
+    );
+
+    mockedSession.findOne.mockResolvedValue({
+      createdAt: new Date(),
+      _id: 'session-1',
+    });
+
+    mockedAdmin.findOne.mockResolvedValue({
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+    });
+
+    const result = await verifyAdmin(token);
+
+    expect(mockedAdmin.findOne).toHaveBeenCalledWith({ userId });
+    expect(result).toBe(userId.toString());
+  });
+
+  it('throws when the session user is not an admin', async () => {
+    const userId = new mongoose.Types.ObjectId();
+
+    const token = jwt.sign(
+      { id: userId.toString(), email: 'user@example.com' },
+      'dev-secret',
+      { expiresIn: '1h' }
+    );
+
+    mockedSession.findOne.mockResolvedValue({
+      createdAt: new Date(),
+      _id: 'session-1',
+    });
+
+    mockedAdmin.findOne.mockResolvedValue(null);
+
+    await expect(verifyAdmin(token))
+      .rejects
+      .toThrow('User is not an admin');
+
+    expect(mockedAdmin.findOne).toHaveBeenCalledWith({ userId });
+  });
+
+  it('throws when the session token is invalid', async () => {
+    mockedSession.findOne.mockResolvedValue(null);
+
+    await expect(verifyAdmin('invalid-token'))
+      .rejects
+      .toThrow('Invalid token');
+
+    expect(mockedAdmin.findOne).not.toHaveBeenCalled();
+  });
+
+  it('propagates an error when the admin lookup fails', async () => {
+    const userId = new mongoose.Types.ObjectId();
+
+    const token = jwt.sign(
+      { id: userId.toString(), email: 'admin@example.com' },
+      'dev-secret',
+      { expiresIn: '1h' }
+    );
+
+    mockedSession.findOne.mockResolvedValue({
+      createdAt: new Date(),
+      _id: 'session-1',
+    });
+
+    mockedAdmin.findOne.mockRejectedValue(
+      new Error('Database connection failed')
+    );
+
+    await expect(verifyAdmin(token))
+      .rejects
+      .toThrow('Database connection failed');
+
+    expect(mockedAdmin.findOne).toHaveBeenCalledWith({ userId });
   });
 });
