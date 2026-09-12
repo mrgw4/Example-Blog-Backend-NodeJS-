@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import * as movieService from '../services/movieServices';
 import mongoose from 'mongoose';
 import { z } from 'zod';
+import { verifyAdmin } from '../services/userServices';
 
 const router = Router();
 
@@ -207,12 +208,42 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid movie id format' });
     }
 
+    const rawAuth = req.headers.authorization;
+
+    if (rawAuth === undefined) {
+      return res.status(400).json({
+        error: 'Authorization token is required'
+      });
+    }
+
+    const authHeader = String(rawAuth).trim();
+
+    if (!/^Bearer\b/i.test(authHeader)) {
+      return res.status(401).json({
+        error: 'Invalid authorization format'
+      });
+    }
+
+    const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+    if (token.length === 0) {
+      return res.status(401).json({
+        error: 'Invalid token'
+      });
+    }
+
+    await verifyAdmin(token);
+
     const movie = await movieService.deleteMovie(id);
 
     return res.status(200).json({ message: 'Movie deleted successfully', movie });
   } catch (error) {
     if (error instanceof Error && error.message.includes('connect')) {
       return res.status(503).json({ error: 'Database unavailable' });
+    } else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    } else if (error instanceof Error && error.message.includes('User is not an admin')) {
+      return res.status(403).json({ error: 'User is not an admin' });
     } else if (error instanceof Error && error.message.includes('not found')) {
       return res.status(404).json({ error: 'Movie not found' });
     } else {

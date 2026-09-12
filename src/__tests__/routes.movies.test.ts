@@ -3,10 +3,13 @@ import express, { Express } from 'express';
 import movieRouter from '../routes/movies';
 import * as movieServices from '../services/movieServices';
 import mongoose from 'mongoose';
+import * as userServices from '../services/userServices';
 
 jest.mock('../services/movieServices');
+jest.mock('../services/userServices');
 
 const mockedServices = movieServices as jest.Mocked<typeof movieServices>;
+const mockedUserServices = userServices as jest.Mocked<typeof userServices>;
 
 const app: Express = express();
 app.use(express.json());
@@ -276,14 +279,148 @@ describe('movies route', () => {
 
   // DELETE /api/movies/:id tests
   it('returns 200 when deleteMovie succeeds', async () => {
-    mockedServices.deleteMovie.mockResolvedValue({ _id: 'movie-1', name: 'Jane Doe' } as any);
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+    mockedServices.deleteMovie.mockResolvedValue({
+      _id: 'movie-1',
+      name: 'Jane Doe'
+    } as any);
 
     const response = await request(app)
       .delete('/api/movies/507f1f77bcf86cd799439011')
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(200);
-    expect(response.body.message).toBe('Movie deleted successfully');
+    expect(response.body).toEqual({
+      message: 'Movie deleted successfully',
+      movie: {
+        _id: 'movie-1',
+        name: 'Jane Doe'
+      }
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('valid-token');
+
+    expect(mockedServices.deleteMovie)
+      .toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+  });
+
+  it('returns 400 when delete has no authorization header', async () => {
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011');
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Authorization token is required'
+    });
+
+    expect(mockedUserServices.verifyAdmin).not.toHaveBeenCalled();
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when delete authorization header is not Bearer', async () => {
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Basic valid-token');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid authorization format'
+    });
+
+    expect(mockedUserServices.verifyAdmin).not.toHaveBeenCalled();
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when delete has an empty Bearer token', async () => {
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer ');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid token'
+    });
+
+    expect(mockedUserServices.verifyAdmin).not.toHaveBeenCalled();
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when verifyAdmin throws an invalid token error', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('Invalid token')
+    );
+
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer invalid-token');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid or expired token'
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('invalid-token');
+
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when verifyAdmin throws a token expired error', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('Token expired')
+    );
+
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer expired-token');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid or expired token'
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('expired-token');
+
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when verifyAdmin throws a non-admin error', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('User is not an admin')
+    );
+
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      error: 'User is not an admin'
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('valid-token');
+
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 when verifyAdmin throws a connect error', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('connect failed')
+    );
+
+    const response = await request(app)
+      .delete('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer valid-token');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: 'Database unavailable'
+    });
+
+    expect(mockedServices.deleteMovie).not.toHaveBeenCalled();
   });
 
   it('returns 400 when delete has invalid ID format', async () => {
@@ -296,44 +433,61 @@ describe('movies route', () => {
   });
 
   it('returns 503 when deleteMovie throws a connect error', async () => {
-    mockedServices.deleteMovie.mockRejectedValue(new Error('connect failed'));
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+    mockedServices.deleteMovie.mockRejectedValue(
+      new Error('connect failed')
+    );
 
     const response = await request(app)
       .delete('/api/movies/507f1f77bcf86cd799439011')
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(503);
-    expect(response.body).toEqual({ error: 'Database unavailable' });
+    expect(response.body).toEqual({
+      error: 'Database unavailable'
+    });
   });
 
   it('returns 500 when deleteMovie throws an unexpected error', async () => {
-    mockedServices.deleteMovie.mockRejectedValue(new Error('unexpected failure'));
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+    mockedServices.deleteMovie.mockRejectedValue(
+      new Error('unexpected failure')
+    );
 
     const response = await request(app)
       .delete('/api/movies/507f1f77bcf86cd799439011')
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(500);
-    expect(response.body).toEqual({ error: 'Failed to delete movie' });
+    expect(response.body).toEqual({
+      error: 'Failed to delete movie'
+    });
   });
 
-  it('returns 400 when delete has invalid ObjectId like 123', async () => {
+  it('returns 400 when delete has invalid ID format', async () => {
     const response = await request(app)
-      .delete('/api/movies/123')
+      .delete('/api/movies/invalid-id')
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: 'Invalid movie id format' });
+    expect(response.body).toEqual({
+      error: 'Invalid movie id format'
+    });
   });
 
   it('returns 404 when deleting a movie that does not exist', async () => {
-    mockedServices.deleteMovie.mockRejectedValue(new Error('movie not found'));
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+    mockedServices.deleteMovie.mockRejectedValue(
+      new Error('movie not found')
+    );
 
     const response = await request(app)
       .delete('/api/movies/507f1f77bcf86cd799439011')
       .set('Authorization', 'Bearer valid-token');
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ error: 'Movie not found' });
+    expect(response.body).toEqual({
+      error: 'Movie not found'
+    });
   });
 });
