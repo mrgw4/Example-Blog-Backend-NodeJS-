@@ -144,6 +144,32 @@ router.get('/:id', async (req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const rawAuth = req.headers.authorization;
+
+    if (rawAuth === undefined) {
+      return res.status(400).json({
+        error: 'Authorization token is required'
+      });
+    }
+
+    const authHeader = String(rawAuth).trim();
+
+    if (!/^Bearer\b/i.test(authHeader)) {
+      return res.status(401).json({
+        error: 'Invalid authorization format'
+      });
+    }
+
+    const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+    if (token.length === 0) {
+      return res.status(401).json({
+        error: 'Invalid token'
+      });
+    }
+
+    await verifyAdmin(token);
+
     const result = MovieSchema.safeParse(req.body);
 
     if (!result.success) {
@@ -187,9 +213,11 @@ router.post('/', async (req: Request, res: Response) => {
           error: 'Invalid movie data',
           fields: Object.keys(error.errors),
         });
-      }
-      // Database connection errors
-      if (error.message.includes('connect')) {
+      } else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+      } else if (error instanceof Error && error.message.includes('User is not an admin')) {
+        return res.status(403).json({ error: 'User is not an admin' });
+      } else if (error.message.includes('connect')) {
         return res.status(503).json({ error: 'Database unavailable' });
       }
     }
