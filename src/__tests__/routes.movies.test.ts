@@ -345,18 +345,24 @@ describe('movies route', () => {
   // PUT /api/movies/:id tests
   it('returns 200 when updateMovie succeeds', async () => {
     mockedServices.updateMovie.mockResolvedValue(movieTestData as any);
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
 
     const response = await request(app)
       .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer valid-token')
       .send({ title: 'Updated Title' });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(movieTestData);
+    expect(mockedUserServices.verifyAdmin).toHaveBeenCalledWith('valid-token');
   });
 
   it('returns 400 when update has no fields to update', async () => {
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+
     const response = await request(app)
       .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer valid-token')
       .send({});
 
     expect(response.status).toBe(400);
@@ -364,6 +370,8 @@ describe('movies route', () => {
   });
 
   it('returns 400 when update has invalid ID format', async () => {
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+
     const response = await request(app)
       .put('/api/movies/invalid-id')
       .set('Authorization', 'Bearer valid-token')
@@ -374,6 +382,7 @@ describe('movies route', () => {
   });
 
   it('returns 404 when updating a movie that does not exist', async () => {
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
     mockedServices.updateMovie.mockRejectedValue(new Error('movie not found'));
 
     const response = await request(app)
@@ -386,6 +395,7 @@ describe('movies route', () => {
   });
 
   it('returns 503 when updateMovie throws a connect error', async () => {
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
     mockedServices.updateMovie.mockRejectedValue(new Error('connect failed'));
 
     const response = await request(app)
@@ -398,6 +408,7 @@ describe('movies route', () => {
   });
 
   it('returns 500 when updateMovie throws an unexpected error', async () => {
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
     mockedServices.updateMovie.mockRejectedValue(new Error('unexpected failure'));
 
     const response = await request(app)
@@ -410,6 +421,8 @@ describe('movies route', () => {
   });
 
   it('returns 400 when PUT has invalid ObjectId like 123', async () => {
+    mockedUserServices.verifyAdmin.mockResolvedValue('507f1f77bcf86cd799439342');
+
     const response = await request(app)
       .put('/api/movies/123')
       .set('Authorization', 'Bearer valid-token')
@@ -417,6 +430,131 @@ describe('movies route', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({ error: 'Invalid movie id format' });
+  });
+
+  it('returns 400 when update has no authorization header', async () => {
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Authorization token is required'
+    });
+
+    expect(mockedUserServices.verifyAdmin).not.toHaveBeenCalled();
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when update authorization header is not Bearer', async () => {
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Basic valid-token')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid authorization format'
+    });
+
+    expect(mockedUserServices.verifyAdmin).not.toHaveBeenCalled();
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when update has an empty Bearer token', async () => {
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer ')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid token'
+    });
+
+    expect(mockedUserServices.verifyAdmin).not.toHaveBeenCalled();
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when verifyAdmin throws an invalid token error on update movie', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('Invalid token')
+    );
+
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer invalid-token')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid or expired token'
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('invalid-token');
+
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when verifyAdmin throws a token expired error on update movie', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('Token expired')
+    );
+
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer expired-token')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Invalid or expired token'
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('expired-token');
+
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when verifyAdmin throws a non-admin error on update movie', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('User is not an admin')
+    );
+
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      error: 'User is not an admin'
+    });
+
+    expect(mockedUserServices.verifyAdmin)
+      .toHaveBeenCalledWith('valid-token');
+
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
+  });
+
+  it('returns 503 when verifyAdmin throws a connect error on update movie', async () => {
+    mockedUserServices.verifyAdmin.mockRejectedValue(
+      new Error('connect failed')
+    );
+
+    const response = await request(app)
+      .put('/api/movies/507f1f77bcf86cd799439011')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ title: 'Updated Title' });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: 'Database unavailable'
+    });
+
+    expect(mockedServices.updateMovie).not.toHaveBeenCalled();
   });
 
 
