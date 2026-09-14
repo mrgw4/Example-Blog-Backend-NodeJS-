@@ -36,7 +36,11 @@ export async function getTotalMovieCount() {
  * @returns Promise resolving to the movie document or null if not found.
  */
 export async function getMovie(id: string) {
-  return Movie.findById(id);
+  const movie = await Movie.findById(id);
+  if (!movie) {
+    throw new Error(`Movie not found`);
+  }
+  return movie;
 }
 
 /**
@@ -54,7 +58,11 @@ export async function createMovie(movieData: any) {
  * @returns Promise resolving to the deleted movie document or null if not found.
  */
 export async function deleteMovie(id: string) {
-  return Movie.findByIdAndDelete(id);
+  const movie = await Movie.findByIdAndDelete(id);
+  if (!movie) {
+    throw new Error(`Movie not found`);
+  }
+  return movie;
 }
 
 /**
@@ -64,5 +72,9 @@ export async function deleteMovie(id: string) {
  * @returns Promise resolving to the updated movie document or null if not found.
  */
 export async function updateMovie(id: string, updateData: any) {
-  return Movie.findByIdAndUpdate(id, updateData, { new: true });
+  const movie = await Movie.findByIdAndUpdate(id, updateData, { new: true });
+  if (!movie) {
+    throw new Error(`Movie not found`);
+  }
+  return movie;
 }

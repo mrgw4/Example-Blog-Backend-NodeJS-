@@ -63,7 +63,7 @@ describe('movies route', () => {
   });
 
   it('returns 404 when the requested movie does not exist', async () => {
-    mockedServices.getMovie.mockResolvedValue(null);
+    mockedServices.getMovie.mockRejectedValue(new Error('Movie not found'));
 
     const response = await request(app).get('/api/movies/507f1f77bcf86cd799439011');
 
@@ -72,7 +72,6 @@ describe('movies route', () => {
   });
 
   it('returns 400 when id is in an invalid format', async () => {
-    mockedServices.getMovie.mockResolvedValue(null);
 
     const response = await request(app).get('/api/movies/123');
 

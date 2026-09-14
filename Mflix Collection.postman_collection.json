@@ -1,50 +1,13 @@
 {
   "info": {
-    "_postman_id": "78ce95f2-5f9c-499f-a29d-cc12927b6c6d",
+    "_postman_id": "192bbf8c-38ca-42ff-a7d4-cc9a76db6581",
     "name": "Blog Collection",
     "description": "API collection for the example blog backend. Includes user tests (create/login/get/update/change-password/logout/delete) and movie tests (CRUD operations) with comprehensive negative tests and validation error scenarios.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "55997364",
-    "_collection_link": "https://go.postman.co/collection/55997364-78ce95f2-5f9c-499f-a29d-cc12927b6c6d?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/55997364-192bbf8c-38ca-42ff-a7d4-cc9a76db6581?source=collection_link"
   },
   "item": [
-    {
-      "name": "Health check",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "  pm.response.to.have.status(200);",
-              "});",
-              "pm.test(\"Health payload is present\", function () {",
-              "  const json = pm.response.json();",
-              "  pm.expect(json).to.have.property('status');",
-              "  pm.expect(json.status).to.equal('OK');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:5000/health",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "5000",
-          "path": [
-            "health"
-          ]
-        }
-      },
-      "response": []
-    },
     {
       "name": "User Tests",
       "item": [
@@ -1364,44 +1327,6 @@
           "response": []
         },
         {
-          "name": "Delete user - missing token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"Error message present\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:5000/api/users/{{userId}}",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "5000",
-              "path": [
-                "api",
-                "users",
-                "{{userId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "Delete user - invalid token",
           "event": [
             {
@@ -1581,6 +1506,44 @@
           "response": []
         },
         {
+          "name": "Delete user - missing token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message present\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/users/{{userId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Reset test database",
           "event": [
             {
@@ -1630,6 +1593,142 @@
     {
       "name": "Movie Tests",
       "item": [
+        {
+          "name": "Get all movies - page 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n  pm.response.to.have.status(200);\n});\npm.test(\"Response has pagination structure\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('data');\n  pm.expect(json).to.have.property('pagination');\n});\npm.test(\"Data is an array\", function () {\n  const json = pm.response.json();\n  pm.expect(Array.isArray(json.data)).to.be.true;\n});\npm.test(\"Pagination info is present\", function () {\n  const json = pm.response.json();\n  pm.expect(json.pagination).to.have.property('page');\n  pm.expect(json.pagination).to.have.property('limit');\n  pm.expect(json.pagination).to.have.property('total');\n  pm.expect(json.pagination).to.have.property('pages');\n  pm.expect(json.pagination).to.have.property('hasNextPage');\n  pm.expect(json.pagination).to.have.property('hasPrevPage');\n});\nconst json = pm.response.json();\npm.environment.set('movieId', json.data[0]._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/movies?page=1&limit=10",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "movies"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all movies - page 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Pagination page is 2\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.pagination.page).to.equal(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/movies?page=2&limit=10",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "movies"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all movies - custom limit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Limit is respected\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.pagination.limit).to.equal(5);",
+                  "  pm.expect(json.data.length).to.be.at.most(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/movies?page=1&limit=5",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "movies"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
         {
           "name": "Login as reset admin",
           "event": [
@@ -1796,17 +1895,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"Error message mentions awards fields\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "  pm.expect(json.error.toLowerCase()).to.include('awards');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 400\", function () {\n  pm.response.to.have.status(400);\n});\npm.test(\"Error message mentions awards fields\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('error');\n  pm.expect(json).to.have.property('fields');\n  pm.expect(json.error.toLowerCase()).to.include('invalid movie data');\n  pm.expect(json.fields).to.include('awards.text');\n\n});"
+                ]
               }
             }
           ],
@@ -1824,7 +1916,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Test Movie\",\"year\":2024,\"type\":\"movie\",\"awards\":{\"wins\":5},\"imdb\":{\"id\":123456,\"rating\":7.5,\"votes\":1000},\"num_mflix_comments\":25,\"lastupdated\":\"2024-01-01T00:00:00Z\"}"
+              "raw": "{\"title\":\"Test Movie\",\"year\":2024,\"type\":\"movie\",\"awards\":{\"wins\":5},\"imdb\":{\"id\":123456,\"rating\":7.5,\"votes\":1000},\"num_mflix_comments\":25,\"lastupdated\":\"2024-01-01T00:00:00Z\"}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "http://localhost:5000/api/movies",
@@ -1847,17 +1944,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"Error message mentions imdb fields\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "  pm.expect(json.error.toLowerCase()).to.include('imdb');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 400\", function () {\n  pm.response.to.have.status(400);\n});\npm.test(\"Error message mentions imdb fields\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('error');\n  pm.expect(json.error.toLowerCase()).to.include('invalid movie data');\n  pm.expect(json.fields).to.include('imdb.rating');\n});"
+                ]
               }
             }
           ],
@@ -1875,7 +1965,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Test Movie\",\"year\":2024,\"type\":\"movie\",\"awards\":{\"wins\":5,\"nominations\":10,\"text\":\"5 wins\"},\"imdb\":{\"id\":123456},\"num_mflix_comments\":25,\"lastupdated\":\"2024-01-01T00:00:00Z\"}"
+              "raw": "{\"title\":\"Test Movie\",\"year\":2024,\"type\":\"movie\",\"awards\":{\"wins\":5,\"nominations\":10,\"text\":\"5 wins\"},\"imdb\":{\"id\":123456},\"num_mflix_comments\":25,\"lastupdated\":\"2024-01-01T00:00:00Z\"}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "http://localhost:5000/api/movies",
@@ -1893,183 +1988,15 @@
           "response": []
         },
         {
-          "name": "Get all movies - page 1",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Response has pagination structure\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('data');",
-                  "  pm.expect(json).to.have.property('pagination');",
-                  "});",
-                  "pm.test(\"Data is an array\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(Array.isArray(json.data)).to.be.true;",
-                  "});",
-                  "pm.test(\"Pagination info is present\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.pagination).to.have.property('page');",
-                  "  pm.expect(json.pagination).to.have.property('limit');",
-                  "  pm.expect(json.pagination).to.have.property('total');",
-                  "  pm.expect(json.pagination).to.have.property('pages');",
-                  "  pm.expect(json.pagination).to.have.property('hasNextPage');",
-                  "  pm.expect(json.pagination).to.have.property('hasPrevPage');",
-                  "});",
-                  "const json = pm.response.json();",
-                  "if (Array.isArray(json.data) && json.data.length > 0) {",
-                  "  pm.environment.set('movieId', json.data[0]._id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:5000/api/movies?page=1&limit=10",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "5000",
-              "path": [
-                "api",
-                "movies"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get all movies - page 2",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Pagination page is 2\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.pagination.page).to.equal(2);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:5000/api/movies?page=2&limit=10",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "5000",
-              "path": [
-                "api",
-                "movies"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "2"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get all movies - custom limit",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Limit is respected\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.pagination.limit).to.equal(5);",
-                  "  pm.expect(json.data.length).to.be.at.most(5);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:5000/api/movies?page=1&limit=5",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "5000",
-              "path": [
-                "api",
-                "movies"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "5"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "Get movie by ID",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Movie contains expected fields\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('_id');",
-                  "  pm.expect(json).to.have.property('title');",
-                  "  pm.expect(json).to.have.property('year');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 200\", function () {\n  pm.response.to.have.status(200);\n});\npm.test(\"Movie contains expected fields\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('_id');\n  pm.expect(json).to.have.property('title');\n  pm.expect(json).to.have.property('year');\n});"
+                ]
               }
             }
           ],
@@ -2077,7 +2004,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:5000/api/movies/{{movieId}}",
+              "raw": "http://localhost:5000/api/movies/573a13cef29313caabd86ecc",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -2086,7 +2013,7 @@
               "path": [
                 "api",
                 "movies",
-                "{{movieId}}"
+                "573a13cef29313caabd86ecc"
               ]
             }
           },
@@ -2175,17 +2102,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Movie updated successfully\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('_id');",
-                  "  pm.expect(json).to.have.property('plot');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 200\", function () {\n  pm.response.to.have.status(200);\n});\npm.test(\"Movie updated successfully\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('_id');\n  pm.expect(json).to.have.property('plot');\n});"
+                ]
               }
             }
           ],
@@ -2203,10 +2123,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"plot\":\"Updated plot for the test movie\"}"
+              "raw": "{\"plot\":\"Updated plot for the test movie\"}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
-              "raw": "http://localhost:5000/api/movies/{{movieId}}",
+              "raw": "http://localhost:5000/api/movies/573a13cef29313caabd86ecc",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -2215,7 +2140,7 @@
               "path": [
                 "api",
                 "movies",
-                "{{movieId}}"
+                "573a13cef29313caabd86ecc"
               ]
             }
           },
@@ -2227,17 +2152,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "  pm.response.to.have.status(404);",
-                  "});",
-                  "pm.test(\"Not found error message\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "  pm.expect(json.error.toLowerCase()).to.include('not found');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 404\", function () {\n  pm.response.to.have.status(404);\n});\npm.test(\"Not found error message\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('error');\n  pm.expect(json.error.toLowerCase()).to.include('not found');\n});"
+                ]
               }
             }
           ],
@@ -2255,10 +2173,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"plot\":\"Should not update\"}"
+              "raw": "{\"plot\":\"Should not update\"}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
-              "raw": "http://localhost:5000/api/movies/507f1f77bcf86cd799439011",
+              "raw": "http://localhost:5000/api/movies/507f1f77bcf86cd799439066",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -2267,7 +2190,7 @@
               "path": [
                 "api",
                 "movies",
-                "507f1f77bcf86cd799439011"
+                "507f1f77bcf86cd799439066"
               ]
             }
           },
@@ -2279,18 +2202,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test(\"Delete success message\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('message');",
-                  "  pm.expect(json.message.toLowerCase()).to.include('deleted');",
-                  "  pm.expect(json).to.have.property('movie');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 200\", function () {\n  pm.response.to.have.status(200);\n});\npm.test(\"Delete success message\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('message');\n  pm.expect(json.message.toLowerCase()).to.include('deleted');\n  pm.expect(json).to.have.property('movie');\n});"
+                ]
               }
             }
           ],
@@ -2303,7 +2218,7 @@
               }
             ],
             "url": {
-              "raw": "http://localhost:5000/api/movies/{{movieId}}",
+              "raw": "http://localhost:5000/api/movies/573a13cef29313caabd86ecc",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -2312,7 +2227,7 @@
               "path": [
                 "api",
                 "movies",
-                "{{movieId}}"
+                "573a13cef29313caabd86ecc"
               ]
             }
           },
@@ -2324,17 +2239,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "  pm.response.to.have.status(404);",
-                  "});",
-                  "pm.test(\"Not found error message\", function () {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('error');",
-                  "  pm.expect(json.error.toLowerCase()).to.include('not found');",
-                  "});"
-                ],
-                "type": "text/javascript"
+                  "pm.test(\"Status code is 404\", function () {\n  pm.response.to.have.status(404);\n});\npm.test(\"Not found error message\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('error');\n  pm.expect(json.error.toLowerCase()).to.include('not found');\n});"
+                ]
               }
             }
           ],
@@ -2347,7 +2255,7 @@
               }
             ],
             "url": {
-              "raw": "http://localhost:5000/api/movies/507f1f77bcf86cd799439011",
+              "raw": "http://localhost:5000/api/movies/573a13cef29313caabd86ecc",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -2356,7 +2264,7 @@
               "path": [
                 "api",
                 "movies",
-                "507f1f77bcf86cd799439011"
+                "573a13cef29313caabd86ecc"
               ]
             }
           },
@@ -2400,6 +2308,43 @@
                 "api",
                 "movies",
                 "invalidid123"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset test database",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {\n  pm.response.to.have.status(200);\n});\npm.test(\"Reset message present\", function () {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('message');\n  pm.expect(json.message.toLowerCase()).to.include('reset');\n  pm.expect(json).to.have.property('copiedCollections');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/testreset/reset",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "testreset",
+                "reset"
               ]
             }
           },
