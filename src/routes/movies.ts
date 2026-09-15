@@ -121,10 +121,6 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const movie = await movieService.getMovie(id);
 
-    if (!movie) {
-      return res.status(404).json({ error: 'Movie not found' });
-    }
-
     return res.status(200).json(movie);
   } catch (error) {
     if (error instanceof Error && error.message.includes('connect')) {

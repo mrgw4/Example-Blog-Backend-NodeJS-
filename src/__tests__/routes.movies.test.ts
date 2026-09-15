@@ -52,7 +52,7 @@ describe('movies route', () => {
     expect(response.body).toEqual({ error: 'Failed to fetch movies' });
   });
 
-
+  // GET /api/movies/:id tests
   it('returns 200 and the requested movie when it exists', async () => {
     mockedServices.getMovie.mockResolvedValue(movieTestData as any);
 

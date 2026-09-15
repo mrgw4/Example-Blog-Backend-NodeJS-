@@ -115,10 +115,9 @@ describe('movieServices', () => {
     it('returns null when a movie is not found by ID', async () => {
         mockedMovie.findById.mockResolvedValue(null);
 
-        const result = await getMovie('nonexistent-id');
+        await expect(getMovie('nonexistent-id')).rejects.toThrow('Movie not found');
 
         expect(mockedMovie.findById).toHaveBeenCalledWith('nonexistent-id');
-        expect(result).toBeNull();
     });
 
     // createMovie tests
@@ -160,10 +159,9 @@ describe('movieServices', () => {
     it('returns null when deleting a movie that does not exist', async () => {
         mockedMovie.findByIdAndDelete.mockResolvedValue(null);
 
-        const result = await deleteMovie('nonexistent-id');
+        await expect(deleteMovie('nonexistent-id')).rejects.toThrow('Movie not found');
 
         expect(mockedMovie.findByIdAndDelete).toHaveBeenCalledWith('nonexistent-id');
-        expect(result).toBeNull();
     });
 
     // updateMovie tests
@@ -192,13 +190,12 @@ describe('movieServices', () => {
     it('returns null when updating a movie that does not exist', async () => {
         mockedMovie.findByIdAndUpdate.mockResolvedValue(null);
 
-        const result = await updateMovie('nonexistent-id', { title: 'Updated Movie' });
+        await expect(updateMovie('nonexistent-id', { title: 'Updated Movie' })).rejects.toThrow('Movie not found');
 
         expect(mockedMovie.findByIdAndUpdate).toHaveBeenCalledWith(
             'nonexistent-id',
             { title: 'Updated Movie' },
             { new: true }
         );
-        expect(result).toBeNull();
     });
 });
