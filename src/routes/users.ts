@@ -9,26 +9,45 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 // Validation schemas
 const CreateUserSchema = z.object({
-  name: z.string().min(4).max(25),
-  email: z.email(),
-  password: z.string().min(6).max(100)});
+    name: z.string().min(4).max(25),
+    email: z.email(),
+    password: z.string().min(6).max(100)
+});
 
 /**
- * GET /api/users
- * Returns all users, excluding sensitive fields.
-
+ * GET /api/users?page=1&limit=20
+ * Returns paginated users, excluding sensitive fields.
  */
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const users = await user.getAllUsers();
+router.get('/', async (req: Request, res: Response) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
+        const skip = (page - 1) * limit;
 
-    res.status(200).json(users);
-    
-    } 
+        const [users, total] = await Promise.all([
+            user.getUsersWithPagination(skip, limit),
+            user.getTotalUserCount()
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        res.status(200).json({
+            data: users,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
+
+    }
     catch (error) {
         if (error instanceof Error && error.message.includes('connect')) {
             res.status(503).json({ error: 'Database unavailable' });
-        } 
+        }
         else {
             res.status(500).json({ error: 'Failed to fetch users' });
         }
@@ -81,19 +100,26 @@ router.post('/logout', async (req: Request, res: Response): Promise<Response | v
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            // No Authorization header at all
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        // Accept either "Bearer <token>" (case-insensitive) or a raw token.
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            // Authorization header present but token missing/malformed
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
         }
 
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
+        }
         await user.deleteSessionToken(token);
 
         return res.status(200).json({ message: 'Logged out successfully' });
@@ -160,7 +186,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<Response | void>
             res.status(404).json({ error: 'User not found' });
         } else {
             res.status(500).json({ error: 'Failed to fetch user' });
-       }
+        }
     }
 });
 
@@ -180,19 +206,19 @@ router.post('/', async (req: Request, res: Response) => {
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Name, email, and password are required' });
         }
-        else{
+        else {
             const validated = CreateUserSchema.parse({ name, email, password });
             await user.createUser(validated);
 
-            return res.status(201).json({ message: 'User created successfully'});
+            return res.status(201).json({ message: 'User created successfully' });
         }
-    } 
+    }
     catch (error) {
         if (error instanceof Error && error.message.includes('connect')) {
             return res.status(503).json({ error: 'Database unavailable' });
         } else {
             if (error instanceof Error) {
-                return res.status(503).json({ error:  error.message});
+                return res.status(503).json({ error: error.message });
             } else {
                 return res.status(500).json({ error: 'Failed to create user' });
             }
@@ -211,16 +237,25 @@ router.delete('/:id', async (req: Request, res: Response) => {
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        // Accept either "Bearer <token>" (case-insensitive) or a raw token.
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            // Authorization header present but token missing/malformed
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
+        }
+
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
         }
 
         const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -236,16 +271,16 @@ router.delete('/:id', async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        await user.deleteUser(id,token);
+        await user.deleteUser(id, token);
 
         return res.status(200).json({ message: 'User deleted successfully' });
 
     } catch (error) {
         if (error instanceof Error && error.message.includes('connect')) {
             return res.status(503).json({ error: 'Database unavailable' });
-        }  else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
+        } else if (error instanceof Error && (error.message === 'Invalid token' || error.message === 'Token expired')) {
             return res.status(401).json({ error: 'Invalid or expired token' });
-        }else {
+        } else {
             return res.status(500).json({ error: 'Failed to delete user' });
         }
     }
@@ -268,14 +303,25 @@ router.put('/:id', async (req: Request, res: Response): Promise<Response | void>
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
+        }
+
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
         }
 
         const verified = await user.verifySessionToken(token);
@@ -336,14 +382,25 @@ router.post('/:id/change-password', async (req: Request, res: Response): Promise
         const rawAuth = req.headers.authorization;
 
         if (rawAuth === undefined) {
-            return res.status(400).json({ error: 'Authorization token is required' });
+            return res.status(400).json({
+                error: 'Authorization token is required'
+            });
         }
 
-        const authHeader = typeof rawAuth === 'string' ? rawAuth : String(rawAuth);
-        const token = authHeader.replace(/^\s*Bearer\s+/i, '').trim();
+        const authHeader = String(rawAuth).trim();
 
-        if (!token || token.length === 0) {
-            return res.status(401).json({ error: 'Invalid token' });
+        if (!/^Bearer\b/i.test(authHeader)) {
+            return res.status(401).json({
+                error: 'Invalid authorization format'
+            });
+        }
+
+        const token = authHeader.replace(/^Bearer\b/i, '').trim();
+
+        if (token.length === 0) {
+            return res.status(401).json({
+                error: 'Invalid token'
+            });
         }
 
         const verified = await user.verifySessionToken(token);

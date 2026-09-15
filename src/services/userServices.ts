@@ -2,6 +2,8 @@ import User from '../models/User';
 import Session from '../models/Session';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import Admin from '../models/Admin';
+import mongoose from 'mongoose';
 
 const SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -12,7 +14,29 @@ const TOKEN_MAX_AGE_MS = 60 * 60 * 1000;
  * @returns Promise resolving to the list of users.
  */
 export async function getAllUsers() {
-   return User.find().select('-password -email').sort({ name: -1 });
+    return User.find().select('-password -email').sort({ name: -1 });
+}
+
+/**
+ * Retrieves paginated users from the database, omitting password and email fields.
+ * @param skip Number of documents to skip.
+ * @param limit Number of documents to return.
+ * @returns Promise resolving to the list of paginated users.
+ */
+export async function getUsersWithPagination(skip: number, limit: number) {
+    return User.find()
+        .select('-password -email')
+        .skip(skip)
+        .limit(limit)
+        .sort({ name: -1 });
+}
+
+/**
+ * Retrieves the total count of users in the database.
+ * @returns Promise resolving to the total number of users.
+ */
+export async function getTotalUserCount() {
+    return User.countDocuments();
 }
 
 /**
@@ -21,7 +45,7 @@ export async function getAllUsers() {
  * @returns Promise resolving to the user document or null if not found.
  */
 export async function getUser(id: string) {
-   return User.findById(id);
+    return User.findById(id);
 }
 
 /**
@@ -31,17 +55,17 @@ export async function getUser(id: string) {
  * @returns Promise resolving to the created user document.
  * @throws {Error} when the email is already in use.
  */
-export async function createUser(userData: { name:string; email: string; password: string }){
+export async function createUser(userData: { name: string; email: string; password: string }) {
 
-    const user = await User.findOne({email: userData.email});
+    const user = await User.findOne({ email: userData.email });
 
     if (user) {
         throw new Error('Email already in use');
     }
 
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
-    
-    return User.create({name: userData.name, email: userData.email, password: hashedPassword,});
+
+    return User.create({ name: userData.name, email: userData.email, password: hashedPassword, });
 }
 
 /**
@@ -106,6 +130,20 @@ export async function verifySessionToken(token: string) {
     }
 
     return { userId: decoded.id, email: decoded.email, session };
+}
+
+export async function verifyAdmin(token: string) {
+    const { userId } = await verifySessionToken(token);
+
+    const admin = await Admin.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+    });
+
+    if (!admin) {
+        throw new Error('User is not an admin');
+    }
+
+    return userId;
 }
 
 /**

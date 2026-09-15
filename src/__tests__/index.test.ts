@@ -25,8 +25,8 @@ import * as indexModule from '../index';
 describe('index module', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => { });
+    jest.spyOn(console, 'error').mockImplementation(() => { });
     delete process.env.PORT;
     delete process.env.MONGODB_URI;
     delete process.env.DATABASE_SELECTION;
@@ -216,5 +216,20 @@ describe('index module', () => {
     exitSpy.mockRestore();
     startServerSpy.mockRestore();
     runServerSpy.mockRestore();
+  });
+
+  it('isCurrentModuleMain returns true when the module is main', () => {
+    const result = indexModule.isCurrentModuleMain('test-file', 'test-file');
+    expect(result).toBe(true);
+  });
+
+  it('isCurrentModuleMain returns false when the module is not main', () => {
+    const result = indexModule.isCurrentModuleMain(undefined, 'other-file');
+    expect(result).toBe(false);
+  });
+
+  it('isCurrentModuleMain returns false when the module is not main', () => {
+    const result = indexModule.isCurrentModuleMain('other-file');
+    expect(result).toBe(false);
   });
 });
